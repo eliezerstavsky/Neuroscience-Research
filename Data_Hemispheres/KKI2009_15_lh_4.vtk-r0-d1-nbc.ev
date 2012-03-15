@@ -1,0 +1,23 @@
+ Creator: ./shapeDNA-tria/shapeDNA-tria
+ File: /home/eli/Neuroscience-Research/Data_Hemispheres/KKI2009_15_lh_4.vtk
+ User: Eliezer Stavsky es2942@columbia.edu Columbia University
+ Refine: 0
+ Degree: 1
+ Dimension: 2
+ Elements: 8240
+ DoF: 4239
+ NumEW: 10
+
+ Area: 3403.87
+ Volume: 0
+ BLength: 218.549
+ EulerChar: 1
+
+ Time(pre) : 0
+ Time(calcAB) : 0
+ Time(calcEW) : 0
+ Time(total ) : 0
+
+Eigenvalues: 
+{ -1.304658376191526279e-19 ; 0.0022153606660990990407 ; 0.0042124475412151762138 ; 0.0079139887978716683126 ; 0.0084756871032336082716 ;
+ 0.014242968730304159108 ; 0.016615211802808223934 ; 0.017444937992373687335 ; 0.022196631919275219835 ; 0.024791231014004808109 }
