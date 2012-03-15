@@ -1,0 +1,5 @@
+The input mesh should not be too coarse, it should be manifold
+and high quality triangles (avoid sliver or other zero area
+triangles for numerical reasons).
+
+Accepts vtk files.i
