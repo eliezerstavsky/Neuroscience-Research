@@ -206,12 +206,12 @@ class Shape:
 			
 		if not(self.has_nodes and self.has_mesh):
 			print 'You have yet to add nodes and meshing!'
+			return
 			
 		angles = self.compute_angles()
 		minima = np.amin(angles, 1)
-		sorted_angles = np.argsort(minima)
 		
-		return sorted_angles[minima<threshold]
+		return np.arange(angles.size)[minima<threshold]
 		
 	def check_well_formed(self):
 		'''Check whether the inputted data is well formed.'''
@@ -274,7 +274,7 @@ class Shape:
 				return
 			
 			if not self.has_labels:
-				self.Labels = NaN
+				self.Labels = None
 			
 			self.vtk = vo.write_all(fname, self.Nodes, self.Mesh, self.Labels, label_type=label, msg=header)
 			print 'vtk file was successfully created at: ', self.vtk.name
@@ -372,11 +372,25 @@ class Shape:
 
 		return 
 		
-	def fix_triangles(self, threshold=0.03):
+	def fix_triangles(self, method='delete', threshold=0.03):
 		'''Handle the ill-shaped triangles of low quality.
 		First attempt: delete the triangles.'''
 		
-		########################$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		if not(self.has_nodes and self.has_mesh):
+			print 'You have yet to enter the nodes and meshing!'
+			return
+		
+		# Find triangles with angles below the threshold.
+		low_quality = self.compute_smallest_angles()
+		
+		if method=='delete':
+			# Delete those triangles from the meshing.
+			bad_triangles = sorted(low_quality, reverse=True)
+			for t in bad_triangles:
+				self.Mesh = np.delete(self.Mesh, t, 0)
+			self.num_faces = self.Mesh.shape[0]
+			
+		return sorted(low_quality)
 		
 	############################################			
 	# ------------------------------------------
