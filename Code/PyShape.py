@@ -16,6 +16,7 @@ import vtk_operations as vo
 import pyvtk
 import subprocess
 from time import time
+from os import system
 
 # Base Class:
 class Shape:
@@ -30,8 +31,9 @@ class Shape:
 	
 	# 'Initialize Object' Method
 	
-	def __init__(self):
+	def __init__(self, id_tag='Testing'):
 		'''Initialize attributes of shape object.'''
+		self.id = str(id_tag)
 		self.Nodes = self.Mesh = self.Labels = 0
 		self.has_nodes = self.has_mesh = self.has_labels = self.has_vtk = 0
 		self.num_nodes = self.num_faces = 0
@@ -107,6 +109,10 @@ class Shape:
 
 			self.has_vtk = 1
 		return 0
+	
+	def set_id(self, id_tag):
+		'''Change the id_tag of the shape. Will be used to name files.'''
+		self.id = str(id_tag)
 		
 	############################################			
 	# ------------------------------------------
@@ -397,12 +403,32 @@ class Shape:
 	#     'Processing of Data' Methods      
 	# ------------------------------------------
 	
-	#def compute_lbo(self,num=200): 
-	#	'''Computation of the LBO using ShapeDNA_Tria software.'''
-	#	p = subprocess.Popen('
-	#if self.vtk == 0:
-	#	self.vtk = create_vtk(self, fname
+	def compute_lbo(self, num=200, check=1, fname='/home/eli/Neuroscience-Research/Data_Hemispheres/Testing.vtk'): 
+		'''Computation of the LBO using ShapeDNA_Tria software.'''
+		# Check that everything has been done properly
+		# Create vtk file
+		
+		if not(self.has_nodes and self.has_mesh):
+			print 'You have yet to enter the nodes and meshing!'
+			return
+		
+		proceed = 'y'
+		if check:
+			proceed = raw_input('Has the data been pre-processed?[y/n] ')
+		
+		if proceed == 'n':
+			print 'Then consider running check_well_formed(), remove_isolated(), fix_triangles()'
+			return
+		
+		if self.has_vtk == 0:
+			print 'Creating a vtk file for visualization and data processing'
+			self.vtk = create_vtk(self, fname)
+		
+		# Run Reuter's code:
+		execute = './shapeDNA-tria/shapeDNA-tria --mesh ' + self.vtk.name + ' --num ' + str(num) + ' --outfile /home/eli/Desktop/outfile_' + self.id
+		system(execute)
 
+		return 0
 	############################################			
 	# ------------------------------------------
 	#     'Post-Processing of Data' Methods      
