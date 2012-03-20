@@ -15,8 +15,9 @@ import numpy as np
 import vtk_operations as vo
 import pyvtk
 import subprocess
-from time import time
-from os import system
+import time
+import os
+from subprocess import Popen, PIPE, check_output, STDOUT
 
 # Base Class:
 class Shape:
@@ -98,7 +99,12 @@ class Shape:
 			Data = pyvtk.VtkData(fname)
 			self.Nodes = np.asarray(Data.structure.points)
 			self.Mesh = np.asarray(Data.structure.polygons)
-		
+			
+			if 'lh' in fname:
+				self.id = 'lh' + Data.header
+			elif 'rh' in fname:
+				self.id = 'rh' + Data.header
+				
 			self.has_nodes = self.has_mesh = 1
 			self.num_nodes = self.Nodes.shape[0]
 			self.num_faces = self.Mesh.shape[0]
@@ -108,7 +114,9 @@ class Shape:
 				self.has_labels = 1
 
 			self.has_vtk = 1
-		return 0
+			self.vtk = open(fname, 'r')
+			
+		return self.id
 	
 	def set_id(self, id_tag):
 		'''Change the id_tag of the shape. Will be used to name files.'''
@@ -137,7 +145,11 @@ class Shape:
 		
 	def get_labels(self):
 		'''Return the label list of the shape.'''
-		return self.Labels				
+		return self.Labels		
+		
+	def get_id(self):
+		'''Return the id_tag of the shape.'''
+		return self.id		
 	
 	############################################			
 	# ------------------------------------------
@@ -250,7 +262,7 @@ class Shape:
 			print 'You have yet to enter the nodes and meshing!'
 			return
 			
-		verts = np.arange(self.num_nodes)
+		verts = set(np.arange(self.num_nodes))
 		meshing = set(self.Mesh.ravel())
 		
 		isolated = list(set.difference(verts, meshing))
@@ -262,7 +274,7 @@ class Shape:
 		isolated = sorted(isolated, reverse=True)
 		print isolated
 		for i in isolated:
-			for j in xrange(i, max_node+1):
+			for j in xrange(i, self.num_nodes+1):
 				self.Mesh[self.Mesh==j] = j - 1
 				
 		self.num_faces = self.Mesh.shape[0]
@@ -270,21 +282,16 @@ class Shape:
 			
 	def create_vtk(self, fname, label = 'Labels', header='Shape Analysis by PyShape'):
 		'''Create vtk file from imported data.'''
-		confirmed = 'y'
-		if self.has_vtk:
-			confirmed = raw_input('There is a vtk file containing the original data. Would you still like to create a new one?[y/n] ')
-		
-		if confirmed == 'y':
-			if not(self.has_nodes and self.has_mesh):
-				print 'You have yet to enter the nodes and meshing!'
-				return
+		if not(self.has_nodes and self.has_mesh):
+			print 'You have yet to enter the nodes and meshing!'
+			return
 			
-			if not self.has_labels:
-				self.Labels = None
+		if not self.has_labels:
+			self.Labels = None
 			
-			self.vtk = vo.write_all(fname, self.Nodes, self.Mesh, self.Labels, label_type=label, msg=header)
-			print 'vtk file was successfully created at: ', self.vtk.name
-			self.has_vtk = 1
+		self.vtk = vo.write_all(fname, self.Nodes, self.Mesh, self.Labels, label_type=label, msg=header)
+		print 'vtk file was successfully created at: ', self.vtk.name
+		self.has_vtk = 1
 		
 		return self.vtk.name
 				
@@ -376,7 +383,7 @@ class Shape:
 		self.num_nodes = self.Nodes.shape[0]
 		self.num_faces = self.Mesh.shape[0]
 
-		return 
+		return 0
 		
 	def fix_triangles(self, method='delete', threshold=0.03):
 		'''Handle the ill-shaped triangles of low quality.
@@ -397,13 +404,21 @@ class Shape:
 			self.num_faces = self.Mesh.shape[0]
 			
 		return sorted(low_quality)
-		
+	
+	def pre_process(self):
+		'''Full pre-processing of the shape object.'''
+		self.remove_isolated()
+		self.fix_triangles()
+		self.check_well_formed()
+		file_name = '/home/eli/Neuroscience-Research/Analysis_Hemispheres/'+self.id+'.vtk'
+		self.create_vtk(file_name)
+	
 	############################################			
 	# ------------------------------------------
 	#     'Processing of Data' Methods      
 	# ------------------------------------------
 	
-	def compute_lbo(self, num=200, check=1, fname='/home/eli/Neuroscience-Research/Data_Hemispheres/Testing.vtk'): 
+	def compute_lbo(self, num=200, check=0, fname='/home/eli/Neuroscience-Research/Analysis_Hemispheres/Testing.vtk'): 
 		'''Computation of the LBO using ShapeDNA_Tria software.'''
 		# Check that everything has been done properly
 		# Create vtk file
@@ -425,10 +440,46 @@ class Shape:
 			self.vtk = create_vtk(self, fname)
 		
 		# Run Reuter's code:
-		execute = './shapeDNA-tria/shapeDNA-tria --mesh ' + self.vtk.name + ' --num ' + str(num) + ' --outfile /home/eli/Desktop/outfile_' + self.id
-		system(execute)
-
-		return 0
+		outfile = '/home/eli/Neuroscience-Research/Analysis_Hemispheres/outfile_' + self.id
+		execute = str('./shapeDNA-tria/shapeDNA-tria --mesh ' + self.vtk.name + ' --num ' + str(num) + ' --outfile ' + outfile + ' --ignorelq')
+		params = ' --mesh ' + self.vtk.name + ' --num ' + str(num) + ' --outfile /home/eli/Desktop/outfile_' + self.id
+		
+		process = Popen(execute, shell=True, stdout = PIPE, stderr = STDOUT)
+		# print repr(process.communicate()[0])
+		if self.num_nodes < 5000:
+			time.sleep(8)
+		else:
+			time.sleep(20)	
+		f = open(outfile)
+		
+		eigenvalues = np.zeros(num)
+		add = False
+		i = 0
+				
+		for line in f:
+			if add:
+				line = line.strip('{')
+				line = line.replace('}','')
+				line = line.replace('\n','')
+				vals = line.split(';')
+				if vals[-1] is '':
+					vals.pop()
+				try:
+					vals = map(float,vals)
+				except:
+					vals = [-1]
+					print 'Could not properly convert line'
+					
+				eigenvalues[i:i+len(vals)] = vals
+				i += len(vals)
+			elif 'Eigenvalues' in line:
+				add = True
+				
+			if i == num:
+				break
+				
+		return eigenvalues
+		
 	############################################			
 	# ------------------------------------------
 	#     'Post-Processing of Data' Methods      
