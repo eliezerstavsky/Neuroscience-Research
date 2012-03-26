@@ -1,23 +1,33 @@
 # Python Module for the Spectral Analysis of Shapes:
 
-# Features:
-#	Object-Oriented Design
-#	Unit-Testing
-#	ConDev
+'''
+Features:
+    Object-Oriented Design
+    Unit-Testing
+    ConDev
 
-# Notes:
-# Program does not currently support tetrahedra. Learn more about how to handle them.
-# Program does not currently compute the volume of a closed surface. Learn about that.
-# Reuter's key.txt must be in directory from which ipython was called.
+Notes:
+    Program does not currently support tetrahedra. Learn more about how to handle them.
+    Program does not currently compute the volume of a closed surface. Learn about that.
+    Reuter's key.txt must be in directory from which ipython was called.
+'''
 
 # Imports:
 import numpy as np
-import vtk_operations as vo
+import networkx as nx
+from scipy import sparse
 import pyvtk
 import subprocess
-import time
+from time import time
 import os
 from subprocess import Popen, PIPE, check_output, STDOUT
+
+import vtk_operations as vo
+import compute_weights as cw
+import graph_operations as go
+
+np.set_printoptions(threshold='nan')
+
 
 # Base Class:
 class Shape:
@@ -35,10 +45,18 @@ class Shape:
 	def __init__(self, id_tag='Testing'):
 		'''Initialize attributes of shape object.'''
 		self.id = str(id_tag)
-		self.Nodes = self.Mesh = self.Labels = 0
+		
+		self.Nodes = self.Mesh = self.Labels = self.vtk = 0
 		self.has_nodes = self.has_mesh = self.has_labels = self.has_vtk = 0
 		self.num_nodes = self.num_faces = 0
-		self.eigenvalues = 0
+		
+		# For computing eigenspectrum of shape
+		self.eigenvalues = self.eigenvectors = 0
+		
+		# For label propagation
+		self.assigned_labels = 0
+		self.Fundi = self.fundal_nodes = 0
+		self.border = 0
 		
 	############################################			
 	# ------------------------------------------
@@ -87,6 +105,7 @@ class Shape:
 		else:
 			self.Labels = np.asarray(labels)
 			self.has_labels = 1
+			self.assigned_labels = np.array(self.Labels.size)
 		return 0
 		
 	def import_vtk(self, fname):
@@ -113,12 +132,31 @@ class Shape:
 			if Data.point_data.data != []:
 				self.Labels = np.asarray(Data.point_data.data[0].scalars)
 				self.has_labels = 1
+				self.assigned_labels = np.array(self.Labels.size)
 
 			self.has_vtk = 1
 			self.vtk = open(fname, 'r')
 			
 		return self.id
 	
+	def import_fundi(self, fname):
+		'''Import fundus lines from a vtk file.'''
+		Data = pyvtk.VtkData(fname)
+		
+		new_nodes = np.asarray(Data.structure.points)
+		if new_nodes != self.Nodes:
+			print 'There is a mismatch between the nodes in the fundus file and the nodes in the original file!'
+		try:
+			self.Fundi = np.asarray(Data.structure.lines)
+			self.fundal_nodes = np.asarray(list(set(self.Fundi)))
+		except:
+			print 'The file does not contain polylines. Please import a different file.'
+		
+		if np.amax(self.Fundi) >= self.num_nodes:
+			print 'The fundi reference nodes which are not in the file. Please consider.'
+		
+		return self.Fundi	
+
 	def set_id(self, id_tag):
 		'''Change the id_tag of the shape. Will be used to name files.'''
 		self.id = str(id_tag)
@@ -147,7 +185,16 @@ class Shape:
 	def get_labels(self):
 		'''Return the label list of the shape.'''
 		return self.Labels		
-		
+	
+	def get_assigned_labels(self):
+		return self.assigned_labels
+	
+	def get_fundi(self):
+		return self.Fundi
+	
+	def get_fundal_nodes(self):
+		return self.fundal_nodes
+	
 	def get_id(self):
 		'''Return the id_tag of the shape.'''
 		return self.id		
@@ -410,6 +457,53 @@ class Shape:
 			
 		return sorted(low_quality)
 	
+	def initialize_labels(self, keep='border', fraction=.05):
+		'''Initialize a set of labels to serve as the seeds for label propagation.
+		Options include: 'border' for nodes connected to fundi.
+		                 'fundi' for nodes which are part of fundi.
+				 'both' for both the fundi and the borders.
+				 'random' for preserving a <fraction> of random nodes.
+		'''
+
+		print 'Initializing labels by preserving {0} nodes.'.format(keep)
+		
+		preserved_labels = np.zeros(self.num_nodes)
+			
+		# If node is part of a fundus:
+		if keep = 'fundi':
+			preserved_labels = 
+			
+		# If node is part of triangle with a fundal nodes		
+		if keep = 'border':
+			for triangles in Meshes:
+				node0, node1, node2 = triangles[0], triangles[1], triangles[2]
+				num_nodes_in_fundi = (node0 in Fundi) + (node1 in Fundi) + (node2 in Fundi)
+				if num_nodes_in_fundi > 0:
+					preserved_labels[triangles] = 1
+	
+		preserved_labels[fundal_nodes == 1] = int(keep_fundi)
+	
+		# Change Labels:
+		Labels[preserved_labels == 0] = -1
+		num_changed = len(np.nonzero(preserved_labels == 0)[0])
+	
+		# OPTION 2. Just delete random nodes (keep 10%)
+		if keep_random and not keep_fundi and not keep_attached:
+			num_changed = 0
+			for i in xrange(num_points):
+				if np.mod(i,10) != 0:
+					num_changed += 1
+					Labels[i] = -1
+			preserved_labels = np.ones(num_points)
+			preserved_labels[Labels == -1] = 0
+		
+		results['num_changed'] = num_changed
+		results['preserved_labels'] = preserved_labels
+		results['Fundi_Labels'] = Labels
+		
+		print "num_changed:", num_changed
+		print "percent_changed:", (num_changed+0.0)/num_points*100
+
 	def pre_process(self, fname):
 		'''Full pre-processing of the shape object.'''
 		self.remove_isolated()
