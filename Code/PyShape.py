@@ -38,6 +38,7 @@ class Shape:
 		self.Nodes = self.Mesh = self.Labels = 0
 		self.has_nodes = self.has_mesh = self.has_labels = self.has_vtk = 0
 		self.num_nodes = self.num_faces = 0
+		self.eigenvalues = 0
 		
 	############################################			
 	# ------------------------------------------
@@ -156,8 +157,9 @@ class Shape:
 	#     'Pre-Processing of Data' Methods      
 	# ------------------------------------------
 	
-	def compute_mesh_measure(self):
-		'''Computes the surface area of a shape object.'''
+	def compute_mesh_measure(self, total=False):
+		'''Computes the surface area of a shape object. 
+		Finds the area of each triangle.'''
 		
 		# Check that nodes and meshing have been inputted.
 		# Check that if shape is composed of polylines, the area is 0.
@@ -188,8 +190,11 @@ class Shape:
 		elif self.Mesh.shape[1] == 4:
 			print 'The meshing comprises tetrahedra. Computation currently unavailable.'
 			measure = 0
-			
-		return measure
+		
+		if total:
+			return sum(measure)
+		else:	
+			return measure
 	
 	def compute_angles(self):
 		'''Computes the angles for each triangle.'''
@@ -405,20 +410,19 @@ class Shape:
 			
 		return sorted(low_quality)
 	
-	def pre_process(self):
+	def pre_process(self, fname):
 		'''Full pre-processing of the shape object.'''
 		self.remove_isolated()
 		self.fix_triangles()
 		self.check_well_formed()
-		file_name = '/home/eli/Neuroscience-Research/Analysis_Hemispheres/'+self.id+'.vtk'
-		self.create_vtk(file_name)
+		self.create_vtk(fname)
 	
 	############################################			
 	# ------------------------------------------
 	#     'Processing of Data' Methods      
 	# ------------------------------------------
 	
-	def compute_lbo(self, num=200, check=0, fname='/home/eli/Neuroscience-Research/Analysis_Hemispheres/Testing.vtk'): 
+	def compute_lbo(self, num=500, check=0, fname='/home/eli/Neuroscience-Research/Analysis_Hemispheres/Testing.vtk'): 
 		'''Computation of the LBO using ShapeDNA_Tria software.'''
 		# Check that everything has been done properly
 		# Create vtk file
@@ -440,16 +444,16 @@ class Shape:
 			self.vtk = create_vtk(self, fname)
 		
 		# Run Reuter's code:
-		outfile = '/home/eli/Neuroscience-Research/Analysis_Hemispheres/outfile_' + self.id
+		outfile = fname[:-4]+'_outfile'
 		execute = str('./shapeDNA-tria/shapeDNA-tria --mesh ' + self.vtk.name + ' --num ' + str(num) + ' --outfile ' + outfile + ' --ignorelq')
 		params = ' --mesh ' + self.vtk.name + ' --num ' + str(num) + ' --outfile /home/eli/Desktop/outfile_' + self.id
 		
 		process = Popen(execute, shell=True, stdout = PIPE, stderr = STDOUT)
 		# print repr(process.communicate()[0])
 		if self.num_nodes < 5000:
-			time.sleep(8)
+			time.sleep(7)
 		else:
-			time.sleep(20)	
+			time.sleep(16)	
 		f = open(outfile)
 		
 		eigenvalues = np.zeros(num)
@@ -477,8 +481,9 @@ class Shape:
 				
 			if i == num:
 				break
-				
-		return eigenvalues
+		
+		self.eigenvalues = eigenvalues
+		return self.eigenvalues
 		
 	############################################			
 	# ------------------------------------------
@@ -494,3 +499,16 @@ class Shape:
 	# ------------------------------------------
 	#     'Visualization of Data' Methods      
 	# ------------------------------------------
+	
+# Derived Classes:
+
+class ShapeRegions(Shape):
+	'''
+	
+	'''
+	
+	def __init__(self):
+		'''Establish important parameters for Analysis of Regions of Shapes.'''
+		super(ShapeRegions, self).__init__()
+		self.num_regions = []
+	

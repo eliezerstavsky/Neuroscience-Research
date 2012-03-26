@@ -9,18 +9,19 @@ import numpy as np
 import PyShape
 from time import time
 import os
+import pylab
 
 # Parameters:
-num_eigs = 200
+num_eigs = 500
 
 # ----------------------------------------
 # Compile list of vtk files to be analyzed
 # ----------------------------------------
 
-path = '/home/eli/Neuroscience-Research/Data_Hemispheres/'
+path = '/home/eli/Neuroscience-Research/Inflated_Hemispheres_KKI2009_15/'
 files = os.listdir(path)
-files.remove('KKI2009_15_lh_30.vtk')
-files.remove('KKI2009_15_rh_30.vtk')
+files.remove('lh_8.vtk')
+files.remove('rh_8.vtk')
 num_files = len(files)
 high = 37
 
@@ -29,14 +30,15 @@ high = 37
 # ---------------------------------------------------
 
 Eigenvalues = np.zeros((high*2, num_eigs))
-
+counter = 0
 for f in files:
-	t0 = time()
+	print 'Processing file number %d' % counter
+	counter += 1
 	if '~' not in f and '.vtk' in f:
 		shape = PyShape.Shape()
 		id_tag = shape.import_vtk(path+f)
-		shape.pre_process()
-		eigs = shape.compute_lbo()
+		shape.pre_process(path+'Analysis/'+id_tag+'.vtk')
+		eigs = shape.compute_lbo(fname=str(path+'Analysis/'+id_tag+'.vtk')) * (shape.compute_mesh_measure(total=True)**(2.0/3.0))
 		
 		if 'lh' in id_tag:
 			n = id_tag.strip('lh')
@@ -53,18 +55,26 @@ for f in files:
 distance = np.zeros((high, high))
 
 i,j = 0,0
-for line1 in Eigenvalues[:high]:
+for line1 in Eigenvalues[:high, :]:
 	if sum(line1) != 0:
-		for line2 in Eigenvalues[high:]:
+		for line2 in Eigenvalues[high:,:]:
 			if sum(line2) != 0:
 				distance[i,j] = np.linalg.norm(line1 - line2) 
 			j += 1
-	i += 1
+	i +=1
+	j = 0
 	
 # ------------------------------
 # Display results of computation
 # ------------------------------
 
-print distance
-
-
+mins = np.zeros(high)
+i=0
+for eachline in distance:
+	print eachline
+	eachline[eachline==0] = 1000
+	minimum = np.argmin(eachline)
+	mins[i] = minimum
+	i+=1
+	
+pylab.plot(mins)
