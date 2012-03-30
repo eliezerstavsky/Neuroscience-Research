@@ -1,17 +1,41 @@
 # Python Module for the Spectral Analysis of Shapes:
+####################################################
+#
+# Overview of Functions:
+########################
+#
+# (A) Initialize Object **
+#
+# (B) Import Data
+#  1- add_nodes **
+#  2- add_mesh **
+#  3- add_labels **
+#  4- import_vtk **
+#  5- import_fundi **
+#  6- set_id **
+#
+# (C) Pre-Processing of Data
+#  1- compute_mesh_measure **
+#  2- compute_angles **
+#  3- compute_smallest_angles **
+#  4- remove_isolated **
+#  5- refine_mesh **
+#  6- fix_triangles **
+#  7- initialize_labels 
+#  8- check_well_formed ** 
+#  9- create_vtk **
+#  10- pre_process **
+#
+# (D) Processing of Data
+#  1- compute_lbo
+#
+# (E) Post-Processing of Data
+#
+# (F) Analysis of Data
+#
+# (G) Visualization of Data
 
-'''
-Features:
-    Object-Oriented Design
-    Unit-Testing
-    ConDev
-
-Notes:
-    Program does not currently support tetrahedra. Learn more about how to handle them.
-    Program does not currently compute the volume of a closed surface. Learn about that.
-    Reuter's key.txt must be in directory from which ipython was called.
-'''
-
+###########################
 # Imports:
 import numpy as np
 import networkx as nx
@@ -28,8 +52,9 @@ import graph_operations as go
 
 np.set_printoptions(threshold='nan')
 
-
+###################################
 # Base Class:
+
 class Shape:
 	'''
 	Shape Class. 
@@ -42,7 +67,7 @@ class Shape:
 	
 	# 'Initialize Object' Method
 	
-	def __init__(self, id_tag='Testing'):
+	def __init__(self, id_tag='PyShape Object'):
 		'''Initialize attributes of shape object.'''
 		self.id = str(id_tag)
 		
@@ -81,14 +106,16 @@ class Shape:
 		
 	def add_mesh(self, mesh):
 		'''Add triangular meshing as 2d array'''
-		# Check to make sure that data is inputted as a 2D array.
-		# Check to make sure that meshing is polylines, triangles or tetrahedra
 		
 		mesh = np.asarray(mesh)
 		if mesh.ndim !=2:
 			print 'Please Enter Data as a 2D Array.'
 		elif mesh.shape[1] < 2 or mesh.shape[1] > 4:
 			print 'Please Provide Polylines, Triangles or Tetrahedra.'
+		elif not all([len(set(list(i)))==mesh.shape[1] for i in mesh]):
+			print 'Some of your faces reference the same node multiple times.'
+		elif np.amax(mesh) >=  self.num_nodes:
+			print 'Meshing refers to non-existent nodes. Be advised.'
 		else:
 			self.Mesh = mesh
 			self.has_mesh = 1
@@ -97,21 +124,20 @@ class Shape:
 		
 	def add_labels(self, labels):
 		'''Add labels to nodes as 1d array.'''
-		# Check to make sure that labels are inputted as a 1D array. 
 		
 		labels = np.asarray(labels)
 		if labels.ndim != 1:
 			print 'Please enter labels as a 1D array.'
+		elif labels.shape[0] != self.num_nodes:
+			print 'You have not provided the appropriate number of labels.'
 		else:
 			self.Labels = np.asarray(labels)
 			self.has_labels = 1
 			self.assigned_labels = np.array(self.Labels.size)
 		return 0
 		
-	def import_vtk(self, fname):
+	def import_vtk(self, fname, check=1):
 		'''Import all data from vtk file.'''
-		# Check to make sure that fname is a string
-		# Check to see if there are labels to be imported too
 		
 		if not isinstance(fname, str):
 			print 'Please enter the file name as a string.'
@@ -121,9 +147,15 @@ class Shape:
 			self.Mesh = np.asarray(Data.structure.polygons)
 			
 			if 'lh' in fname:
-				self.id = 'lh' + Data.header
+				if check:
+					conf = raw_input("Shall I change the id_tag to its region and number?[y/n]")
+					if conf=='y':
+						self.id = 'lh' + Data.header
 			elif 'rh' in fname:
-				self.id = 'rh' + Data.header
+				if check:
+					conf = raw_input("Shall I change the id_tag to its region and number?[y/n]")
+					if conf=='y':
+						self.id = 'rh' + Data.header
 				
 			self.has_nodes = self.has_mesh = 1
 			self.num_nodes = self.Nodes.shape[0]
@@ -144,8 +176,8 @@ class Shape:
 		Data = pyvtk.VtkData(fname)
 		
 		new_nodes = np.asarray(Data.structure.points)
-		if new_nodes != self.Nodes:
-			print 'There is a mismatch between the nodes in the fundus file and the nodes in the original file!'
+		if new_nodes.shape != self.Nodes.shape:
+			print 'Nodes in the fundus file do not match nodes in the original file!'
 		try:
 			self.Fundi = np.asarray(Data.structure.lines)
 			self.fundal_nodes = np.asarray(list(set(self.Fundi)))
@@ -155,49 +187,11 @@ class Shape:
 		if np.amax(self.Fundi) >= self.num_nodes:
 			print 'The fundi reference nodes which are not in the file. Please consider.'
 		
-		return self.Fundi	
+		return self.id	
 
 	def set_id(self, id_tag):
 		'''Change the id_tag of the shape. Will be used to name files.'''
 		self.id = str(id_tag)
-		
-	############################################			
-	# ------------------------------------------
-	#     'Access Data' Methods      
-	# ------------------------------------------
-	
-	def get_num_nodes(self):
-		''''Return the number of nodes in the shape object.'''
-		return self.Nodes.shape[0]
-	
-	def get_num_faces(self):
-		''''Return the number of faces in the shape object.'''
-		return self.Mesh.shape[0]
-	
-	def get_nodes(self):
-		'''Return the node list of the shape.'''
-		return self.Nodes
-		
-	def get_faces(self):
-		'''Return the face list of the shape.'''
-		return self.Mesh
-		
-	def get_labels(self):
-		'''Return the label list of the shape.'''
-		return self.Labels		
-	
-	def get_assigned_labels(self):
-		return self.assigned_labels
-	
-	def get_fundi(self):
-		return self.Fundi
-	
-	def get_fundal_nodes(self):
-		return self.fundal_nodes
-	
-	def get_id(self):
-		'''Return the id_tag of the shape.'''
-		return self.id		
 	
 	############################################			
 	# ------------------------------------------
@@ -283,29 +277,6 @@ class Shape:
 		
 		return np.arange(angles.size)[minima<threshold]
 		
-	def check_well_formed(self):
-		'''Check whether the inputted data is well formed.'''
-		# Check that number of labels corresponds to number of nodes.
-		# Check that numbers in meshing don't exceed number of nodes.
-		
-		if not self.has_nodes:
-			print 'There are no nodes!'
-		if not self.has_mesh:
-			print 'There are no faces!'
-		
-		if self.has_labels and self.has_nodes:
-			if self.Labels.size != self.num_nodes:
-				print 'There is a mismatch betweeen the number of labels provided \
-						and the number of nodes in the shape.'
-				print 'There are {0} nodes and {1} labels. Please fix'.format(self.Nodes.shape[0],self.Labels.size)
-		
-		if self.has_nodes and self.has_labels:
-			max_mesh_num = np.amax(self.Mesh)
-			if max_mesh_num >= self.num_nodes:
-				print 'The meshing contains reference to a non-existent node. Please fix.'
-		
-		return 0
-		
 	def remove_isolated(self):
 		'''Remove any vertices which are not connected to others via the meshing.'''
 		# Remove any vertices which are not connected via meshing.
@@ -331,22 +302,7 @@ class Shape:
 				
 		self.num_faces = self.Mesh.shape[0]
 		return 0
-			
-	def create_vtk(self, fname, label = 'Labels', header='Shape Analysis by PyShape'):
-		'''Create vtk file from imported data.'''
-		if not(self.has_nodes and self.has_mesh):
-			print 'You have yet to enter the nodes and meshing!'
-			return
-			
-		if not self.has_labels:
-			self.Labels = None
-			
-		self.vtk = vo.write_all(fname, self.Nodes, self.Mesh, self.Labels, label_type=label, msg=header)
-		print 'vtk file was successfully created at: ', self.vtk.name
-		self.has_vtk = 1
 		
-		return self.vtk.name
-				
 	def refine_mesh(self, depth = 1, which_fraction=1):
 		'''Refine the meshing of the shape object.
 		Option to refine only the largest triangles exists.
@@ -360,80 +316,84 @@ class Shape:
 			print 'You have yet to enter the nodes and meshing!'
 			return
 		
-		if which_fraction != 1:
-			Areas = self.compute_mesh_measure()
-			sortedIndex = np.argsort(Areas)
-		else:
-			sortedIndex = np.arange(self.num_faces)
+		while(depth > 0):
 		
-		num_to_refine = which_fraction * self.num_faces
-		old_triangles = []
-		threshold = 1E-8
+			if which_fraction != 1:
+				Areas = self.compute_mesh_measure()
+				sortedIndex = np.argsort(Areas)
+			else:
+				sortedIndex = np.arange(self.num_faces)
+		
+			num_to_refine = which_fraction * self.num_faces
+			old_triangles = []
+			threshold = 1E-8
 	
-		for i in xrange(num_to_refine-1,-1,-1):
-			# Find i'th largest triangle:
-			ind = int(np.nonzero(sortedIndex==i)[0])
+			for i in xrange(num_to_refine-1,-1,-1):
+				# Find i'th largest triangle:
+				ind = int(np.nonzero(sortedIndex==i)[0])
 
-			# Record index of old triangle to delete later:
-			old_triangles.append(ind)
+				# Record index of old triangle to delete later:
+				old_triangles.append(ind)
 	
-			# Get vertices of this triangular mesh:		
-			v0, v1, v2 = self.Nodes[self.Mesh[ind,0]], self.Nodes[self.Mesh[ind,1]], self.Nodes[self.Mesh[ind,2]]
+				# Get vertices of this triangular mesh:		
+				v0, v1, v2 = self.Nodes[self.Mesh[ind,0]], self.Nodes[self.Mesh[ind,1]], self.Nodes[self.Mesh[ind,2]]
 
-			# Find midpoints of each edge:
-			mid01 = (v0+v1)/2.0
-			mid02 = (v0+v2)/2.0
-			mid12 = (v1+v2)/2.0
+				# Find midpoints of each edge:
+				mid01 = (v0+v1)/2.0
+				mid02 = (v0+v2)/2.0
+				mid12 = (v1+v2)/2.0
 
-			# Add vertices to the list of nodes:
-			#############################################################
-			# Check to make sure vertices aren't already in list of nodes:
-			dist = self.Nodes - mid01 
-			duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
-			minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
+				# Add vertices to the list of nodes:
+				#############################################################
+				# Check to make sure vertices aren't already in list of nodes:
+				dist = self.Nodes - mid01 
+				duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
+				minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
 
-			if minimum < threshold:
-				# Duplicate! Assign new vertex the number of old vertex
-				ind01 = minindex
-			else:
-				self.Nodes = np.vstack((self.Nodes,mid01))
-				ind01 = self.Nodes.shape[0] - 1
+				if minimum < threshold:
+					# Duplicate! Assign new vertex the number of old vertex
+					ind01 = minindex
+				else:
+					self.Nodes = np.vstack((self.Nodes,mid01))
+					ind01 = self.Nodes.shape[0] - 1
 
-			dist = self.Nodes - mid02 
-			duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
-			minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
+				dist = self.Nodes - mid02 
+				duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
+				minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
 
-			if minimum < threshold:
-				# Duplicate! Assign new vertex the number of old vertex
-				ind02 = minindex
-			else:
-				self.Nodes = np.vstack((self.Nodes,mid02))
-				ind02 = self.Nodes.shape[0] - 1
+				if minimum < threshold:
+					# Duplicate! Assign new vertex the number of old vertex
+					ind02 = minindex
+				else:
+					self.Nodes = np.vstack((self.Nodes,mid02))
+					ind02 = self.Nodes.shape[0] - 1
 
-			dist = self.Nodes - mid12 
-			duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
-			minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
+				dist = self.Nodes - mid12 
+				duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
+				minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
 
-			if minimum < threshold:
-				# Duplicate! Assign new vertex the number of old vertex
-				ind12 = minindex
-			else:
-				self.Nodes = np.vstack((self.Nodes,mid12))
-				ind12 = self.Nodes.shape[0] - 1
-			#############################################################
+				if minimum < threshold:
+					# Duplicate! Assign new vertex the number of old vertex
+					ind12 = minindex
+				else:
+					self.Nodes = np.vstack((self.Nodes,mid12))
+					ind12 = self.Nodes.shape[0] - 1
+				#############################################################
 
-			# Add 4 new triangles:
-			self.Mesh = np.vstack((self.Mesh,np.array([[self.Mesh[ind,0],ind01,ind02]])))
-			self.Mesh = np.vstack((self.Mesh,np.array([[self.Mesh[ind,1],ind01,ind12]])))
-			self.Mesh = np.vstack((self.Mesh,np.array([[self.Mesh[ind,2],ind02,ind12]])))
-			self.Mesh = np.vstack((self.Mesh,np.array([[ind12,ind01,ind02]])))
+				# Add 4 new triangles:
+				self.Mesh = np.vstack((self.Mesh,np.array([[self.Mesh[ind,0],ind01,ind02]])))
+				self.Mesh = np.vstack((self.Mesh,np.array([[self.Mesh[ind,1],ind01,ind12]])))
+				self.Mesh = np.vstack((self.Mesh,np.array([[self.Mesh[ind,2],ind02,ind12]])))
+				self.Mesh = np.vstack((self.Mesh,np.array([[ind12,ind01,ind02]])))
 
-		# Delete triangles which were refined:
-		for old in sorted(old_triangles, reverse=True):
-			self.Mesh = np.delete(self.Mesh,[old*3,old*3+1,old*3+2]).reshape(-1,3)
+			# Delete triangles which were refined:
+			for old in sorted(old_triangles, reverse=True):
+				self.Mesh = np.delete(self.Mesh,[old*3,old*3+1,old*3+2]).reshape(-1,3)
 
-		self.num_nodes = self.Nodes.shape[0]
-		self.num_faces = self.Mesh.shape[0]
+			self.num_nodes = self.Nodes.shape[0]
+			self.num_faces = self.Mesh.shape[0]
+			
+			depth -= 1
 
 		return 0
 		
@@ -461,8 +421,8 @@ class Shape:
 		'''Initialize a set of labels to serve as the seeds for label propagation.
 		Options include: 'border' for nodes connected to fundi.
 		                 'fundi' for nodes which are part of fundi.
-				 'both' for both the fundi and the borders.
-				 'random' for preserving a <fraction> of random nodes.
+				 		 'both' for both the fundi and the borders.
+				 		 'random' for preserving a <fraction> of random nodes.
 		'''
 
 		print 'Initializing labels by preserving {0} nodes.'.format(keep)
@@ -470,11 +430,11 @@ class Shape:
 		preserved_labels = np.zeros(self.num_nodes)
 			
 		# If node is part of a fundus:
-		if keep = 'fundi':
-			preserved_labels = 
+		if keep == 'fundi':
+			preserved_labels = 0 ###
 			
 		# If node is part of triangle with a fundal nodes		
-		if keep = 'border':
+		if keep == 'border':
 			for triangles in Meshes:
 				node0, node1, node2 = triangles[0], triangles[1], triangles[2]
 				num_nodes_in_fundi = (node0 in Fundi) + (node1 in Fundi) + (node2 in Fundi)
@@ -503,6 +463,44 @@ class Shape:
 		
 		print "num_changed:", num_changed
 		print "percent_changed:", (num_changed+0.0)/num_points*100
+
+	def check_well_formed(self):
+		'''Check whether the inputted data is well formed.'''
+		# Check that number of labels corresponds to number of nodes.
+		# Check that numbers in meshing don't exceed number of nodes.
+		
+		if not self.has_nodes:
+			print 'There are no nodes!'
+		if not self.has_mesh:
+			print 'There are no faces!'
+		
+		if self.has_labels and self.has_nodes:
+			if self.Labels.size != self.num_nodes:
+				print 'There is a mismatch betweeen the number of labels provided \
+						and the number of nodes in the shape.'
+				print 'There are {0} nodes and {1} labels. Please fix'.format(self.Nodes.shape[0],self.Labels.size)
+		
+		if self.has_nodes and self.has_labels:
+			max_mesh_num = np.amax(self.Mesh)
+			if max_mesh_num >= self.num_nodes:
+				print 'The meshing contains reference to a non-existent node. Please fix.'
+		
+		return 0
+
+	def create_vtk(self, fname, label = 'Labels', header='Shape Analysis by PyShape'):
+		'''Create vtk file from imported data.'''
+		if not(self.has_nodes and self.has_mesh):
+			print 'You have yet to enter the nodes and meshing!'
+			return
+			
+		if not self.has_labels:
+			self.Labels = None
+			
+		self.vtk = vo.write_all(fname, self.Nodes, self.Mesh, self.Labels, label_type=label, msg=header)
+		print 'vtk file was successfully created at: ', self.vtk.name
+		self.has_vtk = 1
+		
+		return self.vtk.name
 
 	def pre_process(self, fname):
 		'''Full pre-processing of the shape object.'''

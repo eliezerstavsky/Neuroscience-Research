@@ -1,0 +1,13 @@
+Features:
+    Object-Oriented Design
+    Unit-Testing
+    ConDev
+
+Notes:
+    Program does not currently support tetrahedra. Learn more about how to handle them.
+    Program does not currently compute the volume of a closed surface. Learn about that.
+    Reuter's key.txt must be in directory from which ipython was called.
+    
+    ** Indicates method has been tested. (Substitute for unit testing!)
+    
+    When deleting a node, make sure that you delete its label too.
