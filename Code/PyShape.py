@@ -80,6 +80,7 @@ class Shape:
 		
 		# For label propagation
 		self.assigned_labels = 0
+		self.preserved_labels = 0
 		self.Fundi = self.fundal_nodes = 0
 		self.border = 0
 		
@@ -422,48 +423,54 @@ class Shape:
 		Options include: 'border' for nodes connected to fundi.
 		                 'fundi' for nodes which are part of fundi.
 				 		 'both' for both the fundi and the borders.
-				 		 'random' for preserving a <fraction> of random nodes.
-		'''
-
-		print 'Initializing labels by preserving {0} nodes.'.format(keep)
+				 		 'random' for preserving a <fraction> of random nodes.'''
 		
-		preserved_labels = np.zeros(self.num_nodes)
+		if not self.has_labels:
+			print 'The object does not have any labels. Please add them.'
+			return
 			
-		# If node is part of a fundus:
-		if keep == 'fundi':
-			preserved_labels = 0 ###
+		print 'Initializing labels by preserving {0} nodes.'.format(keep)
+		self.assigned_labels = np.zeros(self.num_nodes) - 1
+		self.preserved_labels = np.zeros(self.num_nodes)
 			
-		# If node is part of triangle with a fundal nodes		
-		if keep == 'border':
-			for triangles in Meshes:
+		# To preserve the fundi nodes, find all nodes which are part of a fundus, and
+		# record their index in the array self.preserved_labels
+		if keep in ['fundi','both']:
+			preserved_labels[self.fundal_nodes] = 1
+			
+		# To preserve the border nodes, find all nodes which are part of a triangle with
+		# fundal nodes, and record their index in the array self.preserved_labes 		
+		if keep in ['border','both']:
+			for triangles in self.Mesh:
 				node0, node1, node2 = triangles[0], triangles[1], triangles[2]
 				num_nodes_in_fundi = (node0 in Fundi) + (node1 in Fundi) + (node2 in Fundi)
 				if num_nodes_in_fundi > 0:
-					preserved_labels[triangles] = 1
-	
-		preserved_labels[fundal_nodes == 1] = int(keep_fundi)
-	
-		# Change Labels:
-		Labels[preserved_labels == 0] = -1
-		num_changed = len(np.nonzero(preserved_labels == 0)[0])
-	
-		# OPTION 2. Just delete random nodes (keep 10%)
-		if keep_random and not keep_fundi and not keep_attached:
-			num_changed = 0
-			for i in xrange(num_points):
-				if np.mod(i,10) != 0:
-					num_changed += 1
-					Labels[i] = -1
-			preserved_labels = np.ones(num_points)
-			preserved_labels[Labels == -1] = 0
+					self.preserved_labels[triangles] += 1
+			self.preserved_labels[self.fundal_nodes] -= 1
 		
-		results['num_changed'] = num_changed
-		results['preserved_labels'] = preserved_labels
-		results['Fundi_Labels'] = Labels
+		# To preserve a fraction of random nodes, keep every 1/fraction'th label.
+		if keep == 'random':
+			if fraction > 1:
+				print 'Please enter a fractional number less than or equal to 1.'
+				return
+			
+			randoms = np.array([np.mod(i, int(1.0/fraction)) for i in xrange(num_nodes)])
+			self.preserved_labels[randoms==0] = 1
 		
-		print "num_changed:", num_changed
-		print "percent_changed:", (num_changed+0.0)/num_points*100
+		# Assign the preserved labels to self.assigned_labels.
+		self.assigned_labels[self.preserved_labels==1] = self.Labels[self.preserved_labels==1]
+		
+		# self.assigned_labels now contains the 'true' labels of a subset of the nodes.
+		# main work of the function is complete.
+		# now, provide some statistics for what was done.
+		
+		self.num_labels_preserved = len(self.preserved_labels[self.preserved_labels==1])
+		self.percent_labels_preserved = (self.num_labels_preserved+0.0)/self.num_nodes * 100
+		
+		print 'The percentage of preserved labels: {0}'.format(self.percent_labels_preserved)
 
+		return self.assigned_labels
+		
 	def check_well_formed(self):
 		'''Check whether the inputted data is well formed.'''
 		# Check that number of labels corresponds to number of nodes.
