@@ -684,11 +684,34 @@ class Shape:
 	# ------------------------------------------
 	
 	def weighted_average(self, repeat, diagonal_entries, max_iters, tol):
-		"""Performs iterative weighted average algorithm to propagate labels to unlabeled nodes.
+		'''Performs iterative weighted average algorithm to propagate labels to unlabeled nodes.
 		Features: Hard label clamps, deterministic solution.
-		See: Zhu and Ghahramani, 2002.
-		"""
-		restore = max_iters
+		See: Zhu and Ghahramani, 2002.'''
+        
+        '''The first approach to be considered in the semi-supervised learning case it to propagate labels on the graph. A simple algorithm of this sort has been propoosed by Zhu and Ghahramani (2002), and starts (like all such algorithms) with a set of n nodes, l of which are labeled, and u unlabeled. The algorithm takes as its input the affinity matrix W (self.aff_mat). From the affinity matrix, one may construct the diagonal degree matrix, which is a measure of the total weight (or number of edges) which are attached to a node.'''
+        
+        self.DDM = go.compute_diagonal_degree_matrix(self.aff_mat, inverse=True)
+        
+        '''Next, we must initialize a vector to represent the results of the label propagation algorithm. It will contain l labels and u 0's.This has already been done by the function initialize_labels, and is called self.assigned_labels. We will just check to make sure this has been accomplished.'''
+        
+        if self.assigned_labels == 0:
+            print 'Please initialize the labels by calling self.initialize_labels()'
+            return
+        
+        '''Now, we can actually proceed to perform the iterative algorithm. At each timestep, self.assigned_labels will be updated to reflect the weighted average of adjacent nodes. An important caveat of this algorithm, is that the labeled nodes remain fixed, or clamped. They should not be changed, and will need to be reset. We accomplish the reset by recalling that self.preserved_labels stores the indexes of those nodes whose labels were preserved, and self.Labels contains the actual labels.
+        The algorithm repeates itself until either convergence or max_iters (which will prevent excessive computation time).
+        We must also take care to solve the multi-label problem. To do so, we employ a one-vs-all framework, where each label is considered independently, and set against the rest of the labels.
+        More specifically, '''
+        
+        converged = False
+        while not converged and max_iters > 0:
+            tmp = np.mat(self.DDM * self.aff_mat * np.mat(self.assigned_labels))
+            converged = np.linalg.norm(self.assigned_labels - tmp) < tol
+            self.assigned_labels[self.preserved_labels==1] = self.Labels[self.preserved_labels==1]
+        
+            max_iters -= 1
+        
+        restore = max_iters
 	
 		# Affinity matrix W has diagonal entries of 0. They can be changed in the following loop.
 		if diagonal_entries != 0:
