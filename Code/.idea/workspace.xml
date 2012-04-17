@@ -2,9 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="eef23950-2ffa-435f-bbdf-5e43b1ed5982" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/testing_script.py" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/.~lock.PyShape_Samples.ods#" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/PyShape_Example.py" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/PyShape.py" afterPath="$PROJECT_DIR$/PyShape.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TLabelProp.py" afterPath="$PROJECT_DIR$/TLabelProp.py" />
     </list>
     <ignored path="Code.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -26,35 +28,34 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="PyShape.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="PyShape.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/PyShape.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="695" column="48" selection-start="22850" selection-end="22850" vertical-scroll-proportion="0.4417373">
+            <state line="734" column="76" selection-start="24494" selection-end="24494" vertical-scroll-proportion="0.0">
               <folding>
-                <element signature="e#813#848#0" expanded="true" />
-                <element signature="e#1138#1315#1" expanded="false" />
-                <element signature="e#1396#1849#0" expanded="false" />
-                <element signature="e#2059#2500#0" expanded="false" />
-                <element signature="e#2531#3108#0" expanded="false" />
-                <element signature="e#3143#3521#0" expanded="false" />
-                <element signature="e#3564#4533#0" expanded="false" />
-                <element signature="e#4569#5177#0" expanded="false" />
-                <element signature="e#5208#5297#0" expanded="false" />
-                <element signature="e#5535#6832#0" expanded="false" />
-                <element signature="e#6863#7632#0" expanded="false" />
-                <element signature="e#7688#8102#0" expanded="false" />
-                <element signature="e#8134#8834#0" expanded="false" />
-                <element signature="e#8891#12114#0" expanded="false" />
-                <element signature="e#12177#12742#0" expanded="false" />
-                <element signature="e#12805#15211#0" expanded="false" />
-                <element signature="e#15244#16586#0" expanded="false" />
-                <element signature="e#16620#17426#0" expanded="false" />
-                <element signature="e#17514#17921#0" expanded="false" />
-                <element signature="e#17956#18102#0" expanded="false" />
-                <element signature="e#18407#20046#0" expanded="false" />
-                <element signature="e#20203#20854#1" expanded="false" />
-                <element signature="e#20203#22133#0" expanded="false" />
-                <element signature="e#22899#23078#1" expanded="false" />
+                <element signature="e#813#831#0" expanded="true" />
+                <element signature="e#1153#1330#1" expanded="false" />
+                <element signature="e#1411#1864#0" expanded="false" />
+                <element signature="e#2074#2515#0" expanded="false" />
+                <element signature="e#2546#3123#0" expanded="false" />
+                <element signature="e#3158#3536#0" expanded="false" />
+                <element signature="e#3579#4548#0" expanded="false" />
+                <element signature="e#4584#5192#0" expanded="false" />
+                <element signature="e#5223#5312#0" expanded="false" />
+                <element signature="e#5550#6847#0" expanded="false" />
+                <element signature="e#6878#7647#0" expanded="false" />
+                <element signature="e#7703#8117#0" expanded="false" />
+                <element signature="e#8149#8849#0" expanded="false" />
+                <element signature="e#8906#12129#0" expanded="false" />
+                <element signature="e#12192#12757#0" expanded="false" />
+                <element signature="e#12820#15226#0" expanded="false" />
+                <element signature="e#15259#16631#0" expanded="false" />
+                <element signature="e#16665#17471#0" expanded="false" />
+                <element signature="e#17559#17966#0" expanded="false" />
+                <element signature="e#18001#18147#0" expanded="false" />
+                <element signature="e#18452#20091#0" expanded="false" />
+                <element signature="e#20248#20899#1" expanded="false" />
+                <element signature="e#23867#24134#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -63,16 +64,16 @@
       <file leaf-file-name="LabelPropagation.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/LabelPropagation.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="169" column="35" selection-start="5995" selection-end="5995" vertical-scroll-proportion="0.0">
+            <state line="464" column="41" selection-start="16183" selection-end="16183" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="TLabelProp.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="TLabelProp.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/TLabelProp.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="14" column="0" selection-start="295" selection-end="295" vertical-scroll-proportion="0.0">
+            <state line="10" column="34" selection-start="264" selection-end="264" vertical-scroll-proportion="0.3364486">
               <folding />
             </state>
           </provider>
@@ -97,10 +98,10 @@
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="67" />
-    <option name="y" value="24" />
-    <option name="width" value="1240" />
-    <option name="height" value="1144" />
+    <option name="x" value="150" />
+    <option name="y" value="22" />
+    <option name="width" value="1223" />
+    <option name="height" value="1174" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <OptionsSetting value="true" id="Add" />
@@ -291,18 +292,18 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="67" y="24" width="1240" height="1144" extended-state="0" />
+    <frame x="150" y="22" width="1223" height="1174" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Data Sources" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3296146" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.17171717" sideWeight="0.6703854" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.11101623" sideWeight="0.5551181" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.39978904" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3286004" sideWeight="0.497479" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32911393" sideWeight="0.49663866" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4448819" sideWeight="0.49663866" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -372,55 +373,67 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/graph_operations.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="23" column="39" selection-start="719" selection-end="729" vertical-scroll-proportion="0.0" />
+        <state line="58" column="50" selection-start="1837" selection-end="1837" vertical-scroll-proportion="0.8344549">
+          <folding />
+        </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/compute_weights.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="33" column="42" selection-start="1109" selection-end="1109" vertical-scroll-proportion="0.0" />
+        <state line="33" column="42" selection-start="1109" selection-end="1109" vertical-scroll-proportion="0.16958277">
+          <folding />
+        </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/TLabelProp.py">
+    <entry file="file://$PROJECT_DIR$/Pipeline Notes.txt">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="14" column="0" selection-start="295" selection-end="295" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/LabelPropagation.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="169" column="35" selection-start="5995" selection-end="5995" vertical-scroll-proportion="0.0">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/PyShape.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="695" column="48" selection-start="22850" selection-end="22850" vertical-scroll-proportion="0.4417373">
+        <state line="734" column="76" selection-start="24494" selection-end="24494" vertical-scroll-proportion="0.0">
           <folding>
-            <element signature="e#813#848#0" expanded="true" />
-            <element signature="e#1138#1315#1" expanded="false" />
-            <element signature="e#1396#1849#0" expanded="false" />
-            <element signature="e#2059#2500#0" expanded="false" />
-            <element signature="e#2531#3108#0" expanded="false" />
-            <element signature="e#3143#3521#0" expanded="false" />
-            <element signature="e#3564#4533#0" expanded="false" />
-            <element signature="e#4569#5177#0" expanded="false" />
-            <element signature="e#5208#5297#0" expanded="false" />
-            <element signature="e#5535#6832#0" expanded="false" />
-            <element signature="e#6863#7632#0" expanded="false" />
-            <element signature="e#7688#8102#0" expanded="false" />
-            <element signature="e#8134#8834#0" expanded="false" />
-            <element signature="e#8891#12114#0" expanded="false" />
-            <element signature="e#12177#12742#0" expanded="false" />
-            <element signature="e#12805#15211#0" expanded="false" />
-            <element signature="e#15244#16586#0" expanded="false" />
-            <element signature="e#16620#17426#0" expanded="false" />
-            <element signature="e#17514#17921#0" expanded="false" />
-            <element signature="e#17956#18102#0" expanded="false" />
-            <element signature="e#18407#20046#0" expanded="false" />
-            <element signature="e#20203#20854#1" expanded="false" />
-            <element signature="e#20203#22133#0" expanded="false" />
-            <element signature="e#22899#23078#1" expanded="false" />
+            <element signature="e#813#831#0" expanded="true" />
+            <element signature="e#1153#1330#1" expanded="false" />
+            <element signature="e#1411#1864#0" expanded="false" />
+            <element signature="e#2074#2515#0" expanded="false" />
+            <element signature="e#2546#3123#0" expanded="false" />
+            <element signature="e#3158#3536#0" expanded="false" />
+            <element signature="e#3579#4548#0" expanded="false" />
+            <element signature="e#4584#5192#0" expanded="false" />
+            <element signature="e#5223#5312#0" expanded="false" />
+            <element signature="e#5550#6847#0" expanded="false" />
+            <element signature="e#6878#7647#0" expanded="false" />
+            <element signature="e#7703#8117#0" expanded="false" />
+            <element signature="e#8149#8849#0" expanded="false" />
+            <element signature="e#8906#12129#0" expanded="false" />
+            <element signature="e#12192#12757#0" expanded="false" />
+            <element signature="e#12820#15226#0" expanded="false" />
+            <element signature="e#15259#16631#0" expanded="false" />
+            <element signature="e#16665#17471#0" expanded="false" />
+            <element signature="e#17559#17966#0" expanded="false" />
+            <element signature="e#18001#18147#0" expanded="false" />
+            <element signature="e#18452#20091#0" expanded="false" />
+            <element signature="e#20248#20899#1" expanded="false" />
+            <element signature="e#23867#24134#0" expanded="false" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/LabelPropagation.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="464" column="41" selection-start="16183" selection-end="16183" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/TLabelProp.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="10" column="34" selection-start="264" selection-end="264" vertical-scroll-proportion="0.3364486">
+          <folding />
         </state>
       </provider>
     </entry>

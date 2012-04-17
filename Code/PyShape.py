@@ -38,17 +38,18 @@
 
 ###########################
 # Imports:
-from traits.trait_types import self
 import numpy as np
 import pyvtk
 from time import time
 from subprocess import Popen, PIPE, STDOUT
+from scipy.sparse import csr_matrix
+import pylab
 
 import vtk_operations as vo
 import compute_weights as cw
 import graph_operations as go
 
-np.set_printoptions(threshold='nan')
+# np.set_printoptions(threshold='nan')
 
 ###################################
 # Base Class:
@@ -483,33 +484,32 @@ class Shape:
 		1 in column = membership in that class. -1 = absence. 0 = unlabeled data."""
 
 		# Remove duplicates
-		set_of_labels = np.sort(np.asarray(list(set(self.Labels))))
+		set_of_labels = np.sort(np.asarray(list(set(self.assigned_labels))))
 
 		# If all data is labeled, insert -1 at beginning of list for consistency of later methods.
-		if -1 not in set_of_labels:		
+		if -1 not in set_of_labels:
 			set_of_labels = np.insert(set_of_labels, 0, -1)
 
 		# Number of classes and nodes
 		C = len(set_of_labels) - 1	
 		n = self.Labels.shape[0]
 
-		# Relabel the classes to 0 through C, 0 now indicating no class.
+		# Relabel the classes 0 through C, 0 now indicating no class.
 		for i in set_of_labels[2:]:
-			self.Labels[np.nonzero(self.Labels == i)] = np.nonzero(set_of_labels == i)
-		self.Labels[np.nonzero(self.Labels == 0)] = 1
-		self.Labels[np.nonzero(self.Labels == -1)] = 0
+			self.assigned_labels[np.nonzero(self.assigned_labels == i)] = np.nonzero(set_of_labels == i)
+		self.assigned_labels[np.nonzero(self.assigned_labels == 0)] = 1
+		self.assigned_labels[np.nonzero(self.assigned_labels == -1)] = 0
 
 		# Create a dictionary mapping new class labels to old class labels:
 		self.label_mapping = dict([(i, set_of_labels[i+1]) for i in xrange(-1,C)])
-		print "Label Mapping:", self.label_mapping
 
 		# Construct L x C Matrix	
 		self.label_matrix = np.zeros((n, C))
 
 		for i in xrange(n):
-			if self.Labels[i] != 0:
+			if self.assigned_labels[i] > 0:
 				self.label_matrix[i, :] = -1
-				self.label_matrix[i, self.Labels[i] - 1] = 1
+				self.label_matrix[i, self.assigned_labels[i] - 1] = 1
 
 		self.num_classes = C
 
@@ -655,7 +655,9 @@ class Shape:
 		if method == "weighted_average":
 			print 'Performing Weighted Average Algorithm! Parameters: max_iters={0}'.format(str(max_iters))
 			prob_matrix = self.weighted_average(max_iters, tol)
-
+		elif method == "jacobi_iteration":
+			print 'Performing Jacobi Iteration Algorithm! Parameters: max_iters={0}'.format(str(max_iters))
+			prob_matrix = self.jacobi_iteration(max_iters, tol)
 #		elif method == "Label_Spreading":
 #			print 'Performing Label Spreading Algorithm! Parameters: alpha={0}, max_iters={1}'.format(str(alpha), str(max_iters))
 #			Graph = label_spreading(G, Label_Matrix, aff_mat, label_mapping, data['num_changed'],
@@ -680,10 +682,57 @@ class Shape:
 	#     'Post-Processing of Data' Methods      
 	# ------------------------------------------
 
+	def assign_max_prob_label(self):
+		""" This method takes self.probabilistic_assignment and determines the most likely labeling of a node.
+		It outputs a separate array, max_prob_label, which contains one label for each node.
+		The labels are those of the initial numbering.
+		"""
+
+		""" First, we must check that the label propagation algorithm has been called. """
+
+		try:
+			a = self.probabilistic_assignment[0]
+		except:
+			print 'First call propagate_labels().'
+			return
+
+		""" Now, we go row by row (i.e. one node at a time), and find the column with the maximum value."""
+
+		max_col = np.argmax(self.probabilistic_assignment,axis=1)
+
+		"""	Let us define an array called max_prob_label which will contain the final values."""
+
+		self.max_prob_label = np.zeros(self.num_nodes)
+
+		""" Now, we use the dict label_mapping to convert this matrix back to the original labeling.
+		max_col[i] is the artificial label number."""
+
+		for i in self.num_nodes:
+			self.max_prob_label[i] = self.label_mapping[max_col[i]]
+
+		""" self.max_prob_label is now complete."""
+
+		return self.max_prob_label
+
 	############################################			
 	# ------------------------------------------
 	#     'Analysis of Data' Methods      
 	# ------------------------------------------
+
+	def assess_percent_correct(self):
+		""" This method compares the results of label propagation to the "ground truth" labels found
+		in the original vtk file."""
+
+		self.percent_labeled_correctly = (np.sum(self.max_prob_label == self.Labels) + 0.0) / self.num_nodes
+		return self.percent_labeled_correctly
+
+	def assess_lower_probabilities(self):
+		""" This method finds out which and how many nodes would have been correctly labeled using
+		not the maximum probability, but the 'next' best ones.
+		"""
+
+		""" The way we will accomplish is to sort the probabilities in self.probabilistic_labels.
+		For each node, we will find out which column reports the actual node"""
 
 	############################################			
 	# ------------------------------------------
@@ -700,85 +749,189 @@ class Shape:
 		Features: Hard label clamps, probabilistic solution.
 		See: Zhu and Ghahramani, 2002."""
 
-		# The first approach to be considered in the semi-supervised learning case
-		# is to propagate labels on the graph.
-		# A simple algorithm of this sort has been propoosed by Zhu and Ghahramani (2002),
-		# and starts (like all such algorithms) with a set of n nodes,
-		# l of which are labeled, and u unlabeled.
-		# The algorithm takes as its input the affinity matrix W (self.aff_mat).
-		# From the affinity matrix, one may construct the diagonal degree matrix,
-		# which is a measure of the total weight (or number of edges) which are attached to a node.
+		""" The first approach to be considered in the semi-supervised learning case
+		is to propagate labels on the graph.
+		A simple algorithm of this sort has been propoosed by Zhu and Ghahramani (2002),
+		and starts (like all such algorithms) with a set of n nodes,
+		l of which are labeled, and u unlabeled.
+		The algorithm takes as its input the affinity matrix W (self.aff_mat).
+		From the affinity matrix, one may construct the diagonal degree matrix,
+		which is a measure of the total weight (or number of edges) which are attached to a node."""
 
 		self.DDM = go.compute_diagonal_degree_matrix(self.aff_mat, inverse=True)
 
-		# Next, we must initialize a vector to represent the results of the label propagation algorithm.
-		# It will contain l labels and u 0's.
-		# This has already been done by the function initialize_labels,
-		# and is called self.assigned_labels.
-		# We will just check to make sure this has been accomplished.
+		""" Next, we must initialize a vector to represent the results of the label propagation algorithm.
+		It will contain l labels and u 0's.
+		This has already been done by the function initialize_labels,
+		and is called self.assigned_labels.
+		We will just check to make sure this has been accomplished."""
 
 		if isinstance(self.assigned_labels,int):
 			print 'Please initialize the labels by calling self.initialize_labels()'
 			return
 
-		# Now, we can actually proceed to perform the iterative algorithm.
-		# At each timestep, the labels will be updated to reflect the weighted average
-		# of adjacent nodes. An important caveat of this algorithm,
-		# is that the labeled nodes remain fixed, or clamped.
-		# They should not be changed, and will need to be reset.
-		# We accomplish the reset by recalling that self.preserved_labels
-		# stores the indexes of those nodes whose labels were preserved,
-		# and self.Labels contains the actual labels.
-		# The algorithm repeates itself until either convergence or max_iters
-		# (which will prevent excessive computation time).
-		# We must also take care to solve the multi-label problem.
-		# To do so, we employ a one-vs-all framework, where each label is considered independently,
-		# and set against the rest of the labels.
-		# More specifically, self.label_matrix contains an n x C matrix, where each row represents a node
-		# and each column represents class membership. We can go column by column and process the algorithm
-		# iteratively. So, we'd start at the first column and see which nodes get labeled.
-		# Then we'd move to the next column and label more nodes.
-		# Because it is possible (likely) that some nodes will not receive any label,
-		# and also to account for probabilistic labeling, we will assign a probability
-		# of a node receiving a label. Then we can report these probabilities.
-		# So, to begin, let us first construct this probabilistic label assignment:
-		# This matrix will store a 1 for 100% probability, 0 for 0%, and fractional values for the rest.
+		""" Now, we can actually proceed to perform the iterative algorithm.
+		At each timestep, the labels will be updated to reflect the weighted average
+		of adjacent nodes. An important caveat of this algorithm,
+		is that the labeled nodes remain fixed, or clamped.
+		They should not be changed, and will need to be reset.
+		We accomplish the reset by recalling that self.preserved_labels
+		stores the indexes of those nodes whose labels were preserved,
+		and self.Labels contains the actual labels.
+		The algorithm repeates itself until either convergence or max_iters
+		(which will prevent excessive computation time).
+		We must also take care to solve the multi-label problem.
+		To do so, we employ a one-vs-all framework, where each label is considered independently,
+		and set against the rest of the labels.
+		More specifically, self.label_matrix is an n x C matrix, where each row represents a node
+		and each column represents class membership. We can go column by column and process the algorithm
+		iteratively. So, we'd start at the first column and see which nodes get labeled.
+		Then we'd move to the next column and label more nodes.
+		Because it is possible (likely) that some nodes will not receive any label,
+		and also to account for probabilistic labeling, we will assign a probability
+		of a node receiving a label. Then we can report these probabilities.
+		So, to begin, let us first construct this probabilistic label assignment:
+		This matrix will store a 1 for 100% probability, 0 for 0%, and fractional values for the rest.
+		We will rename self.label_matrix for this purpose."""
 
-		self.probabilistic_assignment = self.label_matrix.copy()
+		self.probabilistic_assignment = self.label_matrix
 
-		# We will later change the -1s to 0s.
-		# As nodes get labeled, we assign a confidence measure to the labeling and store the value
-		# in this matrix.
-		# Now, let us go column by column, run the weighted averaging algorithm.
-		# For each column, you're studying one class. Therefore, when updating self.probabilistic_assignment,
-		# you'll be working with one column at a time too.
-		# If a label gets node, keep the fractional value, do not simply round to 1 to assign membership.
-
-		### For some reason there is a MemoryError here! Fix immediately!
+		"""We will later change the -1s to 0s.
+		As nodes get labeled, we assign a confidence measure to the labeling and store the value
+		in this matrix.
+		Now, let us go column by column, and run the weighted averaging algorithm.
+		For each column, you're studying one class. Therefore, when updating self.probabilistic_assignment,
+		you'll be working with one column at a time too.
+		If a label gets node, keep the fractional value, do not simply round to 1 to assign membership."""
 
 		i = 0 # record of class number
-		for column in self.label_matrix.T:
-			COL = np.mat(self.probabilistic_assignment[:,i]) # shorthand to refence this column
-			restore = column[self.preserved_labels==1] #
+		for column in self.probabilistic_assignment.T:
+			t0 = time()
+			print 'Working on class: ', i
+			restore = column[self.preserved_labels==1]
+			column = csr_matrix(column).transpose()
 			converged = False
 			counter = 0
 			while not converged and counter < max_iters:
-				tmp = np.mat(self.DDM * self.aff_mat * COL.T) # column matrix
-				converged = np.sum(abs(COL - tmp)) < tol # check convergence
-				COL = tmp # store results of iteration
-				COL[self.preserved_labels==1,0] = restore # reset
+				tmp = self.DDM * self.aff_mat * column # column matrix
+				tmp = tmp.todense() # store results of iteration
+				tmp[self.preserved_labels==1,0] = restore # reset
+				converged = (np.sum(np.abs(column.todense() - tmp)) < tol) # check convergence
+				column = csr_matrix(tmp)
 				counter += 1
-				del tmp
-
-			self.probabilistic_assignment[:,i] = COL.flatten()
 
 			# Print out the number of iterations, so that we get a sense for future runs.
 			# It is also an indication of whether the algorithm converged.
+
 			if counter == max_iters:
 				print 'The algorithm did not converge.'
 			else:
 				print 'The algorithm converged in {0} iterations.'.format(str(counter))
 			i += 1
+			print 'Done in {0} seconds'.format(str(time()-t0))
+
+			self.probabilistic_assignment[:,i] = column.todense().flatten()
+
+		""" Before reporting the probabilistic assignment, we change all -1's, which were used
+		to indicate non-membership in a class, into 0's, which signify 0 probability that the
+		node belongs to that class.
+		Note: because the labels were initially numbered -1 and 1, there will be 'probabilities' below 0.
+		So, to obtain a sort of probability distribution which preserves order, we will add 1 to each number,
+		and then divide by 2. Thus -1 --> 0, 1 --> 1 and everything else keeps its order."""
+
+		self.probabilistic_assignment += 1
+		self.probabilistic_assignment /= 2
+
+		""" self.probabilistic_assignment is now complete."""
+		pylab.plot(self.probabilistic_assignment[:,3])
+		pylab.show()
+		return self.probabilistic_assignment
+
+	### WORK ON THIS ALGORITHM NEXT. CLARIFY SLIGHT AMBIGUITY IN WORDING.
+	def jacobi_iteration(self, alpha, max_iters, tol, eps):
+		"""Performs label propagation inspired from Jacobi iterative algorithm
+		to propagate labels to unlabeled nodes.
+		Features: Soft label clamps (alpha), probabilistic solution.
+		See: Chapelle, ch. 11 (algorithm 11.2)."""
+
+		"""The next approach to be considered in the semi-supervised learning case
+		is to propagate labels on the graph, using a modified version of the above algorithm.
+		The main differences are soft clamping, forcing the diagonals to be equal to 0,
+		and the introduction of an error term (eps) for numerical stability.
+
+		We start with a set of n nodes, l of which are labeled, and u unlabeled.
+		The algorithm takes as its input the affinity matrix W (self.aff_mat).
+		From the affinity matrix, we construct the diagonal degree matrix,
+		which is a measure of the total weight (or number of edges) which are attached to a node."""
+
+		self.DDM = go.compute_diagonal_degree_matrix(self.aff_mat, inverse=True)
+
+		"""Next, we must initialize a vector to represent the results
+		of the label propagation algorithm. It will contain l labels and u 0's.
+		This has already been done by the function initialize_labels(),
+		and is called self.assigned_labels.
+		We will just check to make sure this has been accomplished."""
+
+		if isinstance(self.assigned_labels,int):
+			print 'Please initialize the labels by calling self.initialize_labels()'
+			return
+
+		""" Now, we can actually proceed to perform the iterative algorithm.
+		At each timestep, the labels will be updated to reflect the weighted average
+		of adjacent nodes. An important caveat of this algorithm,
+		is that the labeled nodes do not remain fixed, or clamped.
+		The algorithm repeates itself until either convergence or max_iters
+		(which will prevent excessive computation time).
+		We must again take care to solve the multi-label problem.
+		So, to begin, let us first construct this probabilistic label assignment:
+		This matrix will store a 1 for 100% probability, 0 for 0%, and fractional values for the rest.
+		We will rename self.label_matrix for this purpose.
+		We will later change the -1s to 0s."""
+
+		self.probabilistic_assignment = self.label_matrix
+
+		""" Before proceeding, let us check that the parameters are valid"""
+
+		if not (alpha < 1 and alpha > 0 and eps > 0 and isinstance(max_iters, int) and max_iters > 0 and tol > 0):
+			print 'You have failed to properly input parameters. Alpha must be strictly between 0 and 1, eps \ \
+					and tol must be greater than 0 and max_iters must be an integer.'
+			return
+
+		""" As nodes get labeled, we assign a confidence measure to the labeling and store the value in this matrix.
+		Now, let us go column by column, and run the weighted averaging algorithm.
+		For each column, you're studying one class. Therefore, when updating self.probabilistic_assignment,
+		you'll be working with one column at a time too.
+		If a label gets node, keep the fractional value, do not simply round to 1 to assign membership."""
+
+		i = 0 # record of class number
+		for column in self.probabilistic_assignment.T:
+			self.labeled_indices = column[self.preserved_labels==1]
+			column = csr_matrix(column).transpose()
+			converged = False
+			counter = 0
+			while not converged and counter < max_iters:
+				tmp = self.DDM * self.aff_mat * column # column matrix
+				tmp = tmp.tolil() # store results of iteration
+				tmp[self.labeled_indices,0] = self.labeled_indices # reset
+				converged = (np.abs(column - tmp).sum() < tol) # check convergence
+				print 'convergence=', np.abs(column-tmp).sum()
+				column = csr_matrix(tmp)
+				counter += 1
+
+			# Print out the number of iterations, so that we get a sense for future runs.
+			# It is also an indication of whether the algorithm converged.
+
+			if counter == max_iters:
+				print 'The algorithm did not converge.'
+			else:
+				print 'The algorithm converged in {0} iterations.'.format(str(counter))
+			i += 1
+
+		""" Before reporting the probabilistic assignment, we change all -1's, which were used
+		to indicate non-membership in a class, into 0's, which signify 0 probability that the
+		node belongs to that class."""
+
+		self.probabilistic_assignment[self.probabilistic_assignment==-1] = 0
 
 		return self.probabilistic_assignment
 
