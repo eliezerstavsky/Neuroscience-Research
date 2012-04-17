@@ -38,6 +38,7 @@
 
 ###########################
 # Imports:
+from traits.trait_types import self
 import numpy as np
 import pyvtk
 from time import time
@@ -178,9 +179,11 @@ class Shape:
 			print 'Nodes in the fundus file do not match nodes in the original file!'
 		try:
 			self.Fundi = np.asarray(Data.structure.lines)
-			self.fundal_nodes = np.asarray(list(set(self.Fundi)))
 		except:
 			print 'The file does not contain polylines. Please import a different file.'
+			return
+
+		self.fundal_nodes = np.asarray(list(set(self.Fundi.flatten())))
 
 		if np.amax(self.Fundi) >= self.num_nodes:
 			print 'The fundi reference nodes which are not in the file. Please consider.'
@@ -416,43 +419,48 @@ class Shape:
 		return sorted(low_quality)
 
 	def initialize_labels(self, keep='border', fraction=.05):
-		'''Initialize a set of labels to serve as the seeds for label propagation.
+		"""Initialize a set of labels to serve as the seeds for label propagation.
 		Options include: 'border' for nodes connected to fundi.
 						 'fundi' for nodes which are part of fundi.
 						 'both' for both the fundi and the borders.
-						 'random' for preserving a <fraction> of random nodes.'''
+						 'random' for preserving a <fraction> of random nodes."""
 
 		if not self.has_labels:
 			print 'The object does not have any labels. Please add them.'
 			return
 
-		print 'Initializing labels by preserving {0} nodes.'.format(keep)
 		self.assigned_labels = np.zeros(self.num_nodes) - 1
 		self.preserved_labels = np.zeros(self.num_nodes)
-
-		# To preserve the fundi nodes, find all nodes which are part of a fundus, and
-		# record their index in the array self.preserved_labels
-		if keep in ['fundi','both']:
-			preserved_labels[self.fundal_nodes] = 1
 
 		# To preserve the border nodes, find all nodes which are part of a triangle with
 		# fundal nodes, and record their index in the array self.preserved_labes 		
 		if keep in ['border','both']:
+			print 'Preserving border nodes...'
 			for triangles in self.Mesh:
 				node0, node1, node2 = triangles[0], triangles[1], triangles[2]
-				num_nodes_in_fundi = (node0 in Fundi) + (node1 in Fundi) + (node2 in Fundi)
+				num_nodes_in_fundi = (node0 in self.fundal_nodes) + (node1 in self.fundal_nodes) + (node2 in self.fundal_nodes)
 				if num_nodes_in_fundi > 0:
 					self.preserved_labels[triangles] += 1
-			self.preserved_labels[self.fundal_nodes] -= 1
+			self.preserved_labels[self.fundal_nodes] = 0
+
+		# To preserve the fundi nodes, find all nodes which are part of a fundus, and
+		# record their index in the array self.preserved_labels
+		if keep in ['fundi','both']:
+			print 'Preserving fundal nodes...'
+			self.preserved_labels[self.fundal_nodes] = 1
 
 		# To preserve a fraction of random nodes, keep every 1/fraction'th label.
 		if keep == 'random':
+			print 'Preserving random nodes...'
 			if fraction > 1:
 				print 'Please enter a fractional number less than or equal to 1.'
 				return
 
-			randoms = np.array([np.mod(i, int(1.0/fraction)) for i in xrange(num_nodes)])
+			randoms = np.array([np.mod(i, int(1.0/fraction)) for i in xrange(self.num_nodes)])
 			self.preserved_labels[randoms==0] = 1
+
+		# Reassign all positive numbers to 1
+		self.preserved_labels[self.preserved_labels > 0] = 1
 
 		# Assign the preserved labels to self.assigned_labels.
 		self.assigned_labels[self.preserved_labels==1] = self.Labels[self.preserved_labels==1]
@@ -468,14 +476,14 @@ class Shape:
 
 		return self.assigned_labels
 
-	def get_label_matrix(self, Labels):
-		'''Constructs an n x C matrix of labels. 
+	def get_label_matrix(self):
+		"""Constructs an n x C matrix of labels.
 		Input: Array of n labels. -1 corresponds to no label.
-		Output n x C matrix. Row corresponds to node, column corresponds to class. 
-		1 in column = membership in that class. -1 = absence. 0 = unlabeled data.'''
+		Output n x C matrix. Row corresponds to node, column corresponds to class.
+		1 in column = membership in that class. -1 = absence. 0 = unlabeled data."""
 
 		# Remove duplicates
-		set_of_labels = np.sort(np.asarray(list(set(Labels)))) 
+		set_of_labels = np.sort(np.asarray(list(set(self.Labels))))
 
 		# If all data is labeled, insert -1 at beginning of list for consistency of later methods.
 		if -1 not in set_of_labels:		
@@ -483,13 +491,13 @@ class Shape:
 
 		# Number of classes and nodes
 		C = len(set_of_labels) - 1	
-		n = Labels.shape[0]
+		n = self.Labels.shape[0]
 
 		# Relabel the classes to 0 through C, 0 now indicating no class.
 		for i in set_of_labels[2:]:
-			Labels[np.nonzero(Labels == i)] = np.nonzero(set_of_labels == i)
-		Labels[np.nonzero(Labels == 0)] = 1
-		Labels[np.nonzero(Labels == -1)] = 0
+			self.Labels[np.nonzero(self.Labels == i)] = np.nonzero(set_of_labels == i)
+		self.Labels[np.nonzero(self.Labels == 0)] = 1
+		self.Labels[np.nonzero(self.Labels == -1)] = 0
 
 		# Create a dictionary mapping new class labels to old class labels:
 		self.label_mapping = dict([(i, set_of_labels[i+1]) for i in xrange(-1,C)])
@@ -499,9 +507,11 @@ class Shape:
 		self.label_matrix = np.zeros((n, C))
 
 		for i in xrange(n):
-			if Labels[i] != 0:
+			if self.Labels[i] != 0:
 				self.label_matrix[i, :] = -1
-				self.label_matrix[i, Labels[i] - 1] = 1
+				self.label_matrix[i, self.Labels[i] - 1] = 1
+
+		self.num_classes = C
 
 		return self.label_matrix, self.label_mapping
 
@@ -529,7 +539,7 @@ class Shape:
 		return 0
 
 	def create_vtk(self, fname, label = 'Labels', header='Shape Analysis by PyShape'):
-		'''Create vtk file from imported data.'''
+		"""Create vtk file from imported data."""
 		if not(self.has_nodes and self.has_mesh):
 			print 'You have yet to enter the nodes and meshing!'
 			return
@@ -544,7 +554,7 @@ class Shape:
 		return self.vtk.name
 
 	def pre_process(self, fname):
-		'''Full pre-processing of the shape object.'''
+		"""Full pre-processing of the shape object."""
 		self.remove_isolated()
 		self.fix_triangles()
 		self.check_well_formed()
@@ -556,7 +566,7 @@ class Shape:
 	# ------------------------------------------
 
 	def compute_lbo(self, num=500, check=0, fname='/home/eli/Neuroscience-Research/Analysis_Hemispheres/Testing.vtk'): 
-		'''Computation of the LBO using ShapeDNA_Tria software.'''
+		"""Computation of the LBO using ShapeDNA_Tria software."""
 		# Check that everything has been done properly
 		# Create vtk file
 
@@ -572,9 +582,9 @@ class Shape:
 			print 'Then consider running check_well_formed(), remove_isolated(), fix_triangles()'
 			return
 
-		if self.has_vtk == 0:
+		if not self.has_vtk:
 			print 'Creating a vtk file for visualization and data processing'
-			self.vtk = create_vtk(self, fname)
+			self.vtk = self.create_vtk(fname)
 
 		# Run Reuter's code:
 		outfile = fname[:-4]+'_outfile'
@@ -636,30 +646,36 @@ class Shape:
 		9) diagonal - option to change values along the diagonal, will have an effect on some alg."""
 
 		# Step 1. Construct Affinity Matrix - compute edge weights:
-		self.aff_mat = cw.compute_weights(self.Nodes,self.Mesh,kernel=kernel,sigma=sigma)
+		self.aff_mat = cw.compute_weights(self.Nodes,self.Mesh,kernel=kernel,sigma=sigma, add_to_graph=False)
 
 		# Step 2. Transform column of labels into L x C Matrix, one column per class
-		a,b = self.get_label_matrix(self.Labels)
+		a,b = self.get_label_matrix()
 
 		# Step 3. Propagate Labels!
 		if method == "weighted_average":
 			print 'Performing Weighted Average Algorithm! Parameters: max_iters={0}'.format(str(max_iters))
-			(Graph, best_guess) = self.weighted_average(repeat, diagonal, max_iters, tol)
+			prob_matrix = self.weighted_average(max_iters, tol)
 
-		elif algorithm == "Label_Spreading":
-			print 'Performing Label Spreading Algorithm! Parameters: alpha={0}, max_iters={1}'.format(str(alpha), str(max_iters))
-			Graph = label_spreading(G, Label_Matrix, aff_mat, label_mapping, data['num_changed'],
-									repeat, alpha, max_iters, tol)
-		elif algorithm == "Label_Propagation":
-			Graph = label_propagation(G, Label_Matrix, aff_mat, label_mapping, data['num_changed'],
-									  repeat, alpha, eps, max_iters, tol)
-		elif algorithm == "Nearest_Neighbor":
-			print 'Performing 1_nearest_neighbor algorithm!'
-			Graph = nearest_neighbor(G, Label_Matrix, label_mapping)
+#		elif method == "Label_Spreading":
+#			print 'Performing Label Spreading Algorithm! Parameters: alpha={0}, max_iters={1}'.format(str(alpha), str(max_iters))
+#			Graph = label_spreading(G, Label_Matrix, aff_mat, label_mapping, data['num_changed'],
+#									repeat, alpha, max_iters, tol)
+#		elif method == "Label_Propagation":
+#			Graph = label_propagation(G, Label_Matrix, aff_mat, label_mapping, data['num_changed'],
+#									  repeat, alpha, eps, max_iters, tol)
+#		elif method == "Nearest_Neighbor":
+#			print 'Performing 1_nearest_neighbor algorithm!'
+#			Graph = nearest_neighbor(G, Label_Matrix, label_mapping)
+
 		else:
 			Graph = "That algorithm is not available."
+			return
 
-	############################################			
+		print self.probabilistic_assignment[:10000:200,:]
+
+		return self.probabilistic_assignment
+
+	############################################
 	# ------------------------------------------
 	#     'Post-Processing of Data' Methods      
 	# ------------------------------------------
@@ -679,9 +695,9 @@ class Shape:
 	# 			  Helper Methods
 	# ------------------------------------------
 
-	def weighted_average(self, repeat, diagonal_entries, max_iters, tol):
+	def weighted_average(self, max_iters, tol):
 		"""Performs iterative weighted average algorithm to propagate labels to unlabeled nodes.
-		Features: Hard label clamps, deterministic solution.
+		Features: Hard label clamps, probabilistic solution.
 		See: Zhu and Ghahramani, 2002."""
 
 		# The first approach to be considered in the semi-supervised learning case
@@ -701,102 +717,70 @@ class Shape:
 		# and is called self.assigned_labels.
 		# We will just check to make sure this has been accomplished.
 
-		if not self.assigned_labels:
+		if isinstance(self.assigned_labels,int):
 			print 'Please initialize the labels by calling self.initialize_labels()'
 			return
 
 		# Now, we can actually proceed to perform the iterative algorithm.
-		# At each timestep, self.assigned_labels will be updated to reflect the weighted average
+		# At each timestep, the labels will be updated to reflect the weighted average
 		# of adjacent nodes. An important caveat of this algorithm,
 		# is that the labeled nodes remain fixed, or clamped.
 		# They should not be changed, and will need to be reset.
 		# We accomplish the reset by recalling that self.preserved_labels
 		# stores the indexes of those nodes whose labels were preserved,
 		# and self.Labels contains the actual labels.
-        # The algorithm repeates itself until either convergence or max_iters
-        # (which will prevent excessive computation time).
+		# The algorithm repeates itself until either convergence or max_iters
+		# (which will prevent excessive computation time).
 		# We must also take care to solve the multi-label problem.
 		# To do so, we employ a one-vs-all framework, where each label is considered independently,
 		# and set against the rest of the labels.
+		# More specifically, self.label_matrix contains an n x C matrix, where each row represents a node
+		# and each column represents class membership. We can go column by column and process the algorithm
+		# iteratively. So, we'd start at the first column and see which nodes get labeled.
+		# Then we'd move to the next column and label more nodes.
+		# Because it is possible (likely) that some nodes will not receive any label,
+		# and also to account for probabilistic labeling, we will assign a probability
+		# of a node receiving a label. Then we can report these probabilities.
+		# So, to begin, let us first construct this probabilistic label assignment:
+		# This matrix will store a 1 for 100% probability, 0 for 0%, and fractional values for the rest.
 
-		converged = False
-		while not converged and max_iters > 0:
-			tmp = np.mat(self.DDM * self.aff_mat * np.mat(self.assigned_labels))
-			converged = np.linalg.norm(self.assigned_labels - tmp) < tol
-			self.assigned_labels[self.preserved_labels==1] = self.Labels[self.preserved_labels==1]
+		self.probabilistic_assignment = self.label_matrix.copy()
 
-			max_iters -= 1
+		# We will later change the -1s to 0s.
+		# As nodes get labeled, we assign a confidence measure to the labeling and store the value
+		# in this matrix.
+		# Now, let us go column by column, run the weighted averaging algorithm.
+		# For each column, you're studying one class. Therefore, when updating self.probabilistic_assignment,
+		# you'll be working with one column at a time too.
+		# If a label gets node, keep the fractional value, do not simply round to 1 to assign membership.
 
-		restore = max_iters
+		### For some reason there is a MemoryError here! Fix immediately!
 
-		# Affinity matrix W has diagonal entries of 0. They can be changed in the following loop.
-		if diagonal_entries != 0:
-			for i in xrange(num_nodes):
-				self.aff_mat[i, i] = diagonal_entries
+		i = 0 # record of class number
+		for column in self.label_matrix.T:
+			COL = np.mat(self.probabilistic_assignment[:,i]) # shorthand to refence this column
+			restore = column[self.preserved_labels==1] #
+			converged = False
+			counter = 0
+			while not converged and counter < max_iters:
+				tmp = np.mat(self.DDM * self.aff_mat * COL.T) # column matrix
+				converged = np.sum(abs(COL - tmp)) < tol # check convergence
+				COL = tmp # store results of iteration
+				COL[self.preserved_labels==1,0] = restore # reset
+				counter += 1
+				del tmp
 
-		# Construct inverse of Diagonal Degree Matrix
-		self.diag_degree_inv = go.compute_diagonal_degree_matrix(self.aff_mat, inverse=True)
+			self.probabilistic_assignment[:,i] = COL.flatten()
 
-		# Allow for the option to iteratively do the algorithm:
-		# i.e. it will rerun if the number of unlabeled_nodes exceeds a threshold
-		threshold_unlabeled = 100
-		number_unlabeled = num_changed
+			# Print out the number of iterations, so that we get a sense for future runs.
+			# It is also an indication of whether the algorithm converged.
+			if counter == max_iters:
+				print 'The algorithm did not converge.'
+			else:
+				print 'The algorithm converged in {0} iterations.'.format(str(counter))
+			i += 1
 
-		# In the one vs. all framework, let all terminally unlabeled nodes be labeled with best guess.
-		# Actually, let each node's guesses be recorded.
-		# Then, afterwards, check which nodes were labeled incorrectly.
-		# For a node which was labeled incorrectly, find how close you were to getting it.
-		# Let a node be labeled with multiple classes?	
-
-		best_guess = np.zeros((n,Label_Matrix.shape[1]))		
-
-		while (number_unlabeled > threshold_unlabeled) and (repeat > 0):
-			# In one vs. all fashion, iteratively process the weighted average of neighbors.	
-			column_index = 0
-			for column in Label_Matrix.T:	
-				mat_column = np.mat(column).T
-				labeled_indices = np.nonzero(mat_column != 0)[0]
-				num_members = (np.nonzero(mat_column == 1))[0].shape[1]
-				print 'Initial number of members in class {0}: {1}'.format(str(column_index), str(num_members))  
-
-				Y_hat_now = mat_column
-				Y_hat_next = diag_degree_inv * aff_mat * Y_hat_now
-
-				while not_converged(Y_hat_next, Y_hat_now, tol) and max_iters > 0:
-					Y_hat_now = Y_hat_next
-					Y_hat_next = diag_degree_inv * aff_mat * Y_hat_now
-					Y_hat_next[labeled_indices] = mat_column[labeled_indices]
-					max_iters -= 1
-
-				# Store results of algorithm in best guess for use later.
-				best_guess[:,column_index] = np.asarray(Y_hat_next).T
-
-				class_members = np.nonzero(Y_hat_next>0)[0]
-				print 'Current number of members in class {0}: {1}'.format(str(column_index), str(class_members.shape[1]))
-
-				Label_Matrix[class_members, :] = -1
-				Label_Matrix[class_members, column_index] = 1
-
-				column_index += 1
-				max_iters = restore
-
-			# Account for the case where an unlabeled node does not get labeled to any class:
-			number_unlabeled = 0
-			node_num = 0
-			for line in Label_Matrix:
-				if 0 in line:
-					number_unlabeled += 1
-					Label_Matrix[node_num, :] = -1
-					best = np.argmax(best_guess[node_num,:])
-					Label_Matrix[node_num, best] = 1
-				node_num += 1				 
-			print "number of nodes that were unlabeled:", number_unlabeled
-
-			repeat -= 1
-
-		Graph_Final = label_nodes(G, Label_Matrix, label_mapping)
-
-		return Graph_Final, best_guess	
+		return self.probabilistic_assignment
 
 # Derived Classes:
 
@@ -810,3 +794,7 @@ class ShapeRegions(Shape):
 		super(ShapeRegions, self).__init__()
 		self.num_regions = []
 
+		# Affinity matrix W has diagonal entries of 0. They can be changed in the following loop.
+		# if diagonal_entries != 0:
+		#	for i in xrange(num_nodes):
+		#		self.aff_mat[i, i] = diagonal_entries
