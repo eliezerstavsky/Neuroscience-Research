@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="eef23950-2ffa-435f-bbdf-5e43b1ed5982" name="Default" comment="">
       <change type="DELETED" beforePath="$PROJECT_DIR$/.~lock.PyShape_Samples.ods#" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/PyShape_Example.py" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/PyShape.py" afterPath="$PROJECT_DIR$/PyShape.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TLabelProp.py" afterPath="$PROJECT_DIR$/TLabelProp.py" />
@@ -31,7 +30,7 @@
       <file leaf-file-name="PyShape.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/PyShape.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="734" column="76" selection-start="24494" selection-end="24494" vertical-scroll-proportion="0.0">
+            <state line="875" column="46" selection-start="31532" selection-end="31532" vertical-scroll-proportion="0.0">
               <folding>
                 <element signature="e#813#831#0" expanded="true" />
                 <element signature="e#1153#1330#1" expanded="false" />
@@ -49,14 +48,30 @@
                 <element signature="e#8906#12129#0" expanded="false" />
                 <element signature="e#12192#12757#0" expanded="false" />
                 <element signature="e#12820#15226#0" expanded="false" />
-                <element signature="e#15259#16631#0" expanded="false" />
-                <element signature="e#16665#17471#0" expanded="false" />
-                <element signature="e#17559#17966#0" expanded="false" />
-                <element signature="e#18001#18147#0" expanded="false" />
-                <element signature="e#18452#20091#0" expanded="false" />
-                <element signature="e#20248#20899#1" expanded="false" />
-                <element signature="e#23867#24134#0" expanded="false" />
+                <element signature="e#15259#16682#0" expanded="false" />
+                <element signature="e#16716#17522#0" expanded="false" />
+                <element signature="e#17610#18017#0" expanded="false" />
+                <element signature="e#18052#18198#0" expanded="false" />
+                <element signature="e#18503#20142#0" expanded="false" />
+                <element signature="e#20305#22502#0" expanded="false" />
+                <element signature="e#22726#23780#0" expanded="false" />
+                <element signature="e#24001#24268#0" expanded="false" />
+                <element signature="e#24315#24635#0" expanded="false" />
+                <element signature="e#24681#24830#0" expanded="false" />
+                <element signature="e#24872#25063#0" expanded="false" />
+                <element signature="e#25289#25864#0" expanded="false" />
+                <element signature="e#33723#37922#0" expanded="false" />
+                <element signature="e#37972#38338#0" expanded="false" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="vtk_operations.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/vtk_operations.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="182" column="11" selection-start="5565" selection-end="5565" vertical-scroll-proportion="0.0">
+              <folding />
             </state>
           </provider>
         </entry>
@@ -64,7 +79,7 @@
       <file leaf-file-name="LabelPropagation.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/LabelPropagation.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="464" column="41" selection-start="16183" selection-end="16183" vertical-scroll-proportion="0.0">
+            <state line="140" column="11" selection-start="4661" selection-end="4661" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -73,7 +88,7 @@
       <file leaf-file-name="TLabelProp.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/TLabelProp.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="10" column="34" selection-start="264" selection-end="264" vertical-scroll-proportion="0.3364486">
+            <state line="2" column="16" selection-start="36" selection-end="36" vertical-scroll-proportion="0.078431375">
               <folding />
             </state>
           </provider>
@@ -92,14 +107,14 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/TLabelProp.py" />
         <option value="$PROJECT_DIR$/PyShape.py" />
+        <option value="$PROJECT_DIR$/TLabelProp.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="150" />
-    <option name="y" value="22" />
+    <option name="x" value="69" />
+    <option name="y" value="24" />
     <option name="width" value="1223" />
     <option name="height" value="1174" />
   </component>
@@ -129,16 +144,6 @@
       <sortByType />
     </navigator>
     <panes>
-      <pane id="Scope">
-        <subPane subId="Project Files">
-          <PATH>
-            <PATH_ELEMENT USER_OBJECT="Root">
-              <option name="myItemId" value="" />
-              <option name="myItemType" value="" />
-            </PATH_ELEMENT>
-          </PATH>
-        </subPane>
-      </pane>
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -155,6 +160,16 @@
             <PATH_ELEMENT>
               <option name="myItemId" value="Code" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+        </subPane>
+      </pane>
+      <pane id="Scope">
+        <subPane subId="Project Files">
+          <PATH>
+            <PATH_ELEMENT USER_OBJECT="Root">
+              <option name="myItemId" value="" />
+              <option name="myItemType" value="" />
             </PATH_ELEMENT>
           </PATH>
         </subPane>
@@ -292,18 +307,18 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="150" y="22" width="1223" height="1174" extended-state="0" />
-    <editor active="true" />
+    <frame x="69" y="24" width="1223" height="1174" extended-state="1" />
+    <editor active="false" />
     <layout>
       <window_info id="Data Sources" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3296146" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.11101623" sideWeight="0.5551181" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.16908625" sideWeight="0.48031497" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.39978904" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3286004" sideWeight="0.497479" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4448819" sideWeight="0.49663866" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.51968503" sideWeight="0.49663866" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -373,28 +388,45 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/graph_operations.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="58" column="50" selection-start="1837" selection-end="1837" vertical-scroll-proportion="0.8344549">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/compute_weights.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="33" column="42" selection-start="1109" selection-end="1109" vertical-scroll-proportion="0.16958277">
-          <folding />
-        </state>
+        <state line="58" column="50" selection-start="1837" selection-end="1837" vertical-scroll-proportion="0.8344549" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Pipeline Notes.txt">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/compute_weights.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="33" column="42" selection-start="1109" selection-end="1109" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/kernels.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="6" column="23" selection-start="144" selection-end="144" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vtk_operations.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="182" column="11" selection-start="5565" selection-end="5565" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/LabelPropagation.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="140" column="11" selection-start="4661" selection-end="4661" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/PyShape.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="734" column="76" selection-start="24494" selection-end="24494" vertical-scroll-proportion="0.0">
+        <state line="875" column="46" selection-start="31532" selection-end="31532" vertical-scroll-proportion="0.0">
           <folding>
             <element signature="e#813#831#0" expanded="true" />
             <element signature="e#1153#1330#1" expanded="false" />
@@ -412,27 +444,27 @@
             <element signature="e#8906#12129#0" expanded="false" />
             <element signature="e#12192#12757#0" expanded="false" />
             <element signature="e#12820#15226#0" expanded="false" />
-            <element signature="e#15259#16631#0" expanded="false" />
-            <element signature="e#16665#17471#0" expanded="false" />
-            <element signature="e#17559#17966#0" expanded="false" />
-            <element signature="e#18001#18147#0" expanded="false" />
-            <element signature="e#18452#20091#0" expanded="false" />
-            <element signature="e#20248#20899#1" expanded="false" />
-            <element signature="e#23867#24134#0" expanded="false" />
+            <element signature="e#15259#16682#0" expanded="false" />
+            <element signature="e#16716#17522#0" expanded="false" />
+            <element signature="e#17610#18017#0" expanded="false" />
+            <element signature="e#18052#18198#0" expanded="false" />
+            <element signature="e#18503#20142#0" expanded="false" />
+            <element signature="e#20305#22502#0" expanded="false" />
+            <element signature="e#22726#23780#0" expanded="false" />
+            <element signature="e#24001#24268#0" expanded="false" />
+            <element signature="e#24315#24635#0" expanded="false" />
+            <element signature="e#24681#24830#0" expanded="false" />
+            <element signature="e#24872#25063#0" expanded="false" />
+            <element signature="e#25289#25864#0" expanded="false" />
+            <element signature="e#33723#37922#0" expanded="false" />
+            <element signature="e#37972#38338#0" expanded="false" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/LabelPropagation.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="464" column="41" selection-start="16183" selection-end="16183" vertical-scroll-proportion="0.0">
-          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/TLabelProp.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="10" column="34" selection-start="264" selection-end="264" vertical-scroll-proportion="0.3364486">
+        <state line="2" column="16" selection-start="36" selection-end="36" vertical-scroll-proportion="0.078431375">
           <folding />
         </state>
       </provider>

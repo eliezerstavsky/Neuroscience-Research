@@ -501,7 +501,8 @@ class Shape:
 		self.assigned_labels[np.nonzero(self.assigned_labels == -1)] = 0
 
 		# Create a dictionary mapping new class labels to old class labels:
-		self.label_mapping = dict([(i, set_of_labels[i+1]) for i in xrange(-1,C)])
+		self.label_mapping = dict([(i, int(set_of_labels[i+1])) for i in xrange(-1,C)])
+		print "Label Mapping: ", self.label_mapping
 
 		# Construct L x C Matrix	
 		self.label_matrix = np.zeros((n, C))
@@ -628,7 +629,7 @@ class Shape:
 		self.eigenvalues = eigenvalues
 		return self.eigenvalues
 
-	def propagate_labels(self,method='weighted_average', kernel=cw.rbf_kernel, sigma=1, alpha=1, diagonal=0, repeat=1, max_iters=1000, tol=1e-3, eps=1e-7):
+	def propagate_labels(self,method='weighted_average', kernel=cw.rbf_kernel, sigma=10, vis=True, alpha=1, diagonal=0, repeat=1, max_iters=50, tol=1, eps=1e-7):
 		"""Main function to propagate labels.
 		A number of methods may be used for this purpose:
 		1) 'weighted_average'
@@ -643,7 +644,8 @@ class Shape:
 		6) max_iters - number of times to iterate an algorithm
 		7) tol - threshold to assess convergence
 		8) eps - for numerical stability
-		9) diagonal - option to change values along the diagonal, will have an effect on some alg."""
+		9) diagonal - option to change values along the diagonal, will have an effect on some alg.
+		10) vis - boolean, would you like to see the algorithm in work?"""
 
 		# Step 1. Construct Affinity Matrix - compute edge weights:
 		self.aff_mat = cw.compute_weights(self.Nodes,self.Mesh,kernel=kernel,sigma=sigma, add_to_graph=False)
@@ -654,10 +656,12 @@ class Shape:
 		# Step 3. Propagate Labels!
 		if method == "weighted_average":
 			print 'Performing Weighted Average Algorithm! Parameters: max_iters={0}'.format(str(max_iters))
-			prob_matrix = self.weighted_average(max_iters, tol)
+			prob_matrix = self.weighted_average(max_iters, tol, vis=vis)
+
 		elif method == "jacobi_iteration":
 			print 'Performing Jacobi Iteration Algorithm! Parameters: max_iters={0}'.format(str(max_iters))
 			prob_matrix = self.jacobi_iteration(max_iters, tol)
+
 #		elif method == "Label_Spreading":
 #			print 'Performing Label Spreading Algorithm! Parameters: alpha={0}, max_iters={1}'.format(str(alpha), str(max_iters))
 #			Graph = label_spreading(G, Label_Matrix, aff_mat, label_mapping, data['num_changed'],
@@ -726,7 +730,7 @@ class Shape:
 		self.percent_labeled_correctly = (np.sum(self.max_prob_label == self.Labels) + 0.0) / self.num_nodes
 		return self.percent_labeled_correctly
 
-	def assess_lower_probabilities(self):
+	def assess_secondary_probabilities(self):
 		""" This method finds out which and how many nodes would have been correctly labeled using
 		not the maximum probability, but the 'next' best ones.
 		"""
@@ -734,17 +738,42 @@ class Shape:
 		""" The way we will accomplish is to sort the probabilities in self.probabilistic_labels.
 		For each node, we will find out which column reports the actual node"""
 
+	def count_assigned_members(self, label):
+		""" Method which returns the number of members in a class. Label used is artificial ordering."""
+		return sum(map(int,self.label_matrix[:,label]==1))
+
+	def count_real_members(self, label):
+		""" Method which returns the number of members in a class, as per the manual labeling.
+		Label used is the label name in the vtk file!"""
+		return sum(np.asarray(map(int,self.Labels==label)))
+
 	############################################			
 	# ------------------------------------------
 	#     'Visualization of Data' Methods      
 	# ------------------------------------------
+
+	def highlight(self, class_label):
+		"""
+		This method highlights a set of nodes which belong to the specified class.
+		To accomplish this, we find all the nodes which have that label -
+		this can be found in self.Labels -
+		and then we create a new array where those indices are labeled 1 and all others are labeled -1.
+		"""
+
+		indices = np.asarray(map(int,self.Labels==class_label)) * 2 - 1
+
+		""" That's it. Now we just write the file."""
+
+		filename = '/home/eli/Neuroscience-Research/Visualizations/highlighted_'+self.id+'_'+str(class_label)+'.vtk'
+
+		vo.write_all(filename, self.Nodes, self.Mesh, indices)
 
 	############################################
 	# ------------------------------------------
 	# 			  Helper Methods
 	# ------------------------------------------
 
-	def weighted_average(self, max_iters, tol):
+	def weighted_average(self, max_iters, tol, vis=True):
 		"""Performs iterative weighted average algorithm to propagate labels to unlabeled nodes.
 		Features: Hard label clamps, probabilistic solution.
 		See: Zhu and Ghahramani, 2002."""
@@ -796,7 +825,7 @@ class Shape:
 
 		self.probabilistic_assignment = self.label_matrix
 
-		"""We will later change the -1s to 0s.
+		""" We will later change the -1s to 0s.
 		As nodes get labeled, we assign a confidence measure to the labeling and store the value
 		in this matrix.
 		Now, let us go column by column, and run the weighted averaging algorithm.
@@ -809,15 +838,49 @@ class Shape:
 			t0 = time()
 			print 'Working on class: ', i
 			restore = column[self.preserved_labels==1]
-			column = csr_matrix(column).transpose()
+			Y_hat_now = csr_matrix(column).transpose()
 			converged = False
 			counter = 0
 			while not converged and counter < max_iters:
-				tmp = self.DDM * self.aff_mat * column # column matrix
-				tmp = tmp.todense() # store results of iteration
-				tmp[self.preserved_labels==1,0] = restore # reset
-				converged = (np.sum(np.abs(column.todense() - tmp)) < tol) # check convergence
-				column = csr_matrix(tmp)
+				""" The option will exist to visualize the proceedings of the algorith.
+				The results of a number of the iterations will be sent to vtk files which can then be visualized.
+				For the visualization, we will construct two types of vtk files.
+				The first will be the actual (manual) labels, as found in self.Labels,
+				with the class of interest highlighted (=1), and the others blanked out (=-1)
+				The other vtk files will be the result of the algorithm.
+				"""
+				if vis:
+					"""First, we'll find out which class/label we're working with, by calling label_mapping.
+					We'll then send that class to the method highlight() which will do the actual work of
+					creating the vtk."""
+					label = self.label_mapping[i]
+					if not counter: # No need to do this more than once :-)
+						self.highlight(label)
+
+					""" Next, we'll construct vtk files, assuming that the iteration step is one we care about.
+					For our purposes, let's see the early iterations in high density, once low density in the middle,
+					and the last iteration before convergence or max_iters.
+					So, the numbers of interest will be when counter is between 0 and 10, and at 100.
+					We'll also see max_iters/2, and max_iters (or convergence).
+					"""
+					# Actually, just see if counter is a multiple of a number of interest.
+					# set_of_interest = np.array([0,101,202,max_iters-2,max_iters-1])
+
+					""" Let's define a file for output.
+					We have the nodes and meshing, and we have the labels which are found in column.todense().flatten()."""
+
+					filename = '/home/eli/Neuroscience-Research/Visualizations/'+self.id+'_'+str(label)+'_'+str(counter)+'.vtk'
+
+					if not np.mod(counter,1000):
+						LABELS = np.zeros(self.num_nodes)
+						LABELS[:] = Y_hat_now.todense().T.flatten()
+						vo.write_all(filename, self.Nodes, self.Mesh, LABELS)
+
+				Y_hat_next = (self.DDM * self.aff_mat * Y_hat_now).todense() # column matrix
+				Y_hat_next[self.preserved_labels==1,0] = restore # reset
+				converged = (np.sum(np.abs(Y_hat_now.todense() - Y_hat_next)) < tol) # check convergence
+				# print 'Iteration number {0}, convergence = {1}'.format(str(counter),str(np.sum(np.abs(column.todense() - tmp))))
+				Y_hat_now = csr_matrix(Y_hat_next)
 				counter += 1
 
 			# Print out the number of iterations, so that we get a sense for future runs.
@@ -827,10 +890,18 @@ class Shape:
 				print 'The algorithm did not converge.'
 			else:
 				print 'The algorithm converged in {0} iterations.'.format(str(counter))
-			i += 1
+
 			print 'Done in {0} seconds'.format(str(time()-t0))
 
-			self.probabilistic_assignment[:,i] = column.todense().flatten()
+			self.probabilistic_assignment[:,i] = Y_hat_now.todense().flatten()
+
+			print 'There were {0} nodes initially preserved in this class'.format(str(self.count_assigned_members(i)))
+			print 'The file actually had {0} nodes in this class'.format(str(self.count_real_members(self.label_mapping[i])))
+			a = self.probabilistic_assignment[:,i] > 0
+			b = map(int, a)
+			c = sum(b)
+			print 'Using only those nodes which crossed the threshold, there are now: ', c
+			i += 1
 
 		""" Before reporting the probabilistic assignment, we change all -1's, which were used
 		to indicate non-membership in a class, into 0's, which signify 0 probability that the
@@ -843,8 +914,8 @@ class Shape:
 		self.probabilistic_assignment /= 2
 
 		""" self.probabilistic_assignment is now complete."""
-		pylab.plot(self.probabilistic_assignment[:,3])
-		pylab.show()
+		#pylab.plot(self.probabilistic_assignment[:,3])
+		#pylab.show()
 		return self.probabilistic_assignment
 
 	### WORK ON THIS ALGORITHM NEXT. CLARIFY SLIGHT AMBIGUITY IN WORDING.
@@ -904,6 +975,7 @@ class Shape:
 		If a label gets node, keep the fractional value, do not simply round to 1 to assign membership."""
 
 		i = 0 # record of class number
+
 		for column in self.probabilistic_assignment.T:
 			self.labeled_indices = column[self.preserved_labels==1]
 			column = csr_matrix(column).transpose()
