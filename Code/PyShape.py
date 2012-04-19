@@ -1,40 +1,41 @@
-# Python Module for the Spectral Analysis of Shapes:
-####################################################
-#
-# Overview of Functions:
-########################
-#
-# (A) Initialize Object **
-#
-# (B) Import Data
-#  1- add_nodes **
-#  2- add_mesh **
-#  3- add_labels **
-#  4- import_vtk **
-#  5- import_fundi **
-#  6- set_id **
-#
-# (C) Pre-Processing of Data
-#  1- compute_mesh_measure **
-#  2- compute_angles **
-#  3- compute_smallest_angles **
-#  4- remove_isolated **
-#  5- refine_mesh **
-#  6- fix_triangles **
-#  7- initialize_labels (Done, check!)
-#  8- check_well_formed ** 
-#  9- create_vtk **
-#  10- pre_process **
-#
-# (D) Processing of Data
-#  1- compute_lbo
-#  2- propagate_labels
-#
-# (E) Post-Processing of Data
-#
-# (F) Analysis of Data
-#
-# (G) Visualization of Data
+""" Python Module for the Spectral Analysis of Shapes:
+###################################################
+
+Overview of Functions:
+#######################
+
+(A) Initialize Object **
+
+(B) Import Data
+  1- add_nodes **
+  2- add_mesh **
+  3- add_labels **
+  4- import_vtk **
+  5- import_fundi **
+  6- set_id **
+
+(C) Pre-Processing of Data
+  1- compute_mesh_measure **
+  2- compute_angles **
+  3- compute_smallest_angles **
+  4- remove_isolated **
+  5- refine_mesh **
+  6- fix_triangles **
+  7- initialize_labels (Done, check!)
+  8- check_well_formed **
+  9- create_vtk **
+  10- pre_process **
+
+(D) Processing of Data
+  1- compute_lbo
+  2- propagate_labels
+
+(E) Post-Processing of Data
+
+(F) Analysis of Data
+
+(G) Visualization of Data
+"""
 
 ###########################
 # Imports:
@@ -450,6 +451,11 @@ class Shape:
 			print 'Preserving fundal nodes...'
 			self.preserved_labels[self.fundal_nodes] = 1
 
+		# To preserve the nodes which comprise the label boundary, call find_label_boundary()
+		if keep == 'label_boundary':
+			print 'Preserving nodes of the label boundary'
+			self.preserved_labels[self.find_label_boundary(draw=True)] = 1
+
 		# To preserve a fraction of random nodes, keep every 1/fraction'th label.
 		if keep == 'random':
 			print 'Preserving random nodes...'
@@ -515,6 +521,47 @@ class Shape:
 		self.num_classes = C
 
 		return self.label_matrix, self.label_mapping
+
+	def find_label_boundary(self, draw=True):
+		""" This method finds those nodes which comprise the label boundary.
+		I will define a label boundary as the set of all nodes
+		whose neighbors are not all from the same class.
+		Thus, any node which is connected to two (or more) nodes from different classes
+		will be a boundary node, and will help constitute the label boundary.
+		"""
+
+		""" To do so, we simply go triangle by triangle and see if they are all from the same class.
+		If yes, do nothing.
+		If no, then add the nodes from the majority class (it'll be 2 to 1) to the label boundary.
+		First, let us define an empty array to store the label boundaries.
+		It will have zeros and ones. We can then define a new array to store all and only those nodes
+		which are part of the label boundary.
+		"""
+
+		self.label_boundary = np.zeros(self.num_nodes)
+
+		""" Now, let us go triangle by triangle. Set the node's index in label_boundary to 1
+		if and only if it is satisfies the definition.
+		"""
+
+		for triangle in self.Mesh:
+			v0, v1, v2 = triangle[0], triangle[1], triangle[2]
+			# If they are not all the same...
+			same_labels = [self.Labels[v1]==self.Labels[v2], self.Labels[v0]==self.Labels[v2], self.Labels[v0]==self.Labels[v1]]
+			# Did it this way for option to modify it later. Perhaps reconsider 'not all' statement.
+			if not all(same_labels):
+				# Then label those nodes as part of the boundary.
+				self.label_boundary[triangle] = 1
+
+		# We can now output a file to show the boundary.
+		if draw:
+			filename = '/home/eli/Neuroscience-Research/Visualizations/Alignment/label_boundary_'+self.id+'.vtk'
+			vo.write_all(filename,self.Nodes,self.Mesh,self.label_boundary)
+
+		# Reformat label_boundary to include only the indices of those nodes in the boundary.
+		self.label_boundary = np.nonzero(self.label_boundary==1)[0]
+
+		return self.label_boundary
 
 	def check_well_formed(self):
 		'''Check whether the inputted data is well formed.'''
@@ -764,7 +811,7 @@ class Shape:
 
 		""" That's it. Now we just write the file."""
 
-		filename = '/home/eli/Neuroscience-Research/Visualizations/highlighted_'+self.id+'_'+str(class_label)+'.vtk'
+		filename = '/home/eli/Neuroscience-Research/Visualizations/Alignment/highlighted_'+self.id+'_'+str(class_label)+'.vtk'
 
 		vo.write_all(filename, self.Nodes, self.Mesh, indices)
 
@@ -869,7 +916,7 @@ class Shape:
 					""" Let's define a file for output.
 					We have the nodes and meshing, and we have the labels which are found in column.todense().flatten()."""
 
-					filename = '/home/eli/Neuroscience-Research/Visualizations/'+self.id+'_'+str(label)+'_'+str(counter)+'.vtk'
+					filename = '/home/eli/Neuroscience-Research/Visualizations/Alignment/'+self.id+'_'+str(label)+'_'+str(counter)+'.vtk'
 
 					if not np.mod(counter,1000):
 						LABELS = np.zeros(self.num_nodes)
@@ -1023,3 +1070,27 @@ class ShapeRegions(Shape):
 		# if diagonal_entries != 0:
 		#	for i in xrange(num_nodes):
 		#		self.aff_mat[i, i] = diagonal_entries
+
+
+
+
+############################################
+# ------------------------------------------
+#           TESTS / DEBUGGING
+# ------------------------------------------
+############################################
+
+shape = Shape()
+
+def test1():
+	shape.import_vtk('/home/eli/Neuroscience-Research/Label_Prop/testdatalabels.vtk')
+	shape.import_fundi('/home/eli/Neuroscience-Research/Label_Prop/testdata_fundi.vtk')
+	shape.initialize_labels(keep='both')
+	shape.propagate_labels(max_iters=1200, sigma=10)
+
+def test2():
+	shape.import_vtk('/home/eli/Neuroscience-Research/Label_Prop/lh.aparcNMMjt.pial.vtk')
+	shape.initialize_labels(keep='label_boundary')
+	shape.propagate_labels(max_iters=6000, sigma=5)
+
+test2()
