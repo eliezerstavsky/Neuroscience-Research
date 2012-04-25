@@ -173,7 +173,7 @@ def write_edges(file_name, Edges):
 	for line in edges:
 		f.write(str(edge_type)+ ' ')
 		for element in line:
-			f.write(str(element) + ' ')
+			f.write(str(int(element)) + ' ')
 		f.write('\n')
 	f.close()
 	return f
@@ -187,7 +187,7 @@ def write_labels(file_name, Labels, label_type='Labels'):
 	f.write('LOOKUP_TABLE ' + str(label_type) + '\n')
 	
 	for i in labels:
-		f.write(str(i) + '\n')
+		f.write(str(int(i)) + '\n')
 	f.close()
 	return f
 	

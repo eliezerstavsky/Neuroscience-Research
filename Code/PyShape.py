@@ -43,8 +43,8 @@ import numpy as np
 import pyvtk
 from time import time
 from subprocess import Popen, PIPE, STDOUT
-from scipy.sparse import csr_matrix
-import pylab
+from scipy.sparse import csr_matrix, lil_matrix
+import os
 
 import vtk_operations as vo
 import compute_weights as cw
@@ -57,12 +57,12 @@ import graph_operations as go
 
 class Shape:
 	"""
-	Shape Class. 
+	Shape Class.
 	1) Import data into object from either a vtk file or manually.
 	2) Construct vtk if necessary.
 	3) Pre-process data if necessary.
 	4) Run LBO code.
-	5) 
+	5)
 	"""
 
 	# 'Initialize Object' Method
@@ -84,13 +84,16 @@ class Shape:
 		self.Fundi = self.fundal_nodes = 0
 		self.border = 0
 
-	############################################			
+		# For constructing the neighbors matrix
+		self.neighbors_constructed = 0
+
+	############################################
 	# ------------------------------------------
-	#     'Import Data' Methods      
+	#     'Import Data' Methods
 	# ------------------------------------------
 
 	def add_nodes(self, nodes):
-		'''Add 3D coordinates of nodes as 2d array.'''
+		"""Add 3D coordinates of nodes as 2d array."""
 		# Check to make sure that Nodes were inputted as a 2D array.
 		# Check to make sure that Nodes are of dimension <= 3
 
@@ -103,10 +106,10 @@ class Shape:
 			self.Nodes = nodes
 			self.has_nodes = 1
 			self.num_nodes = self.Nodes.shape[0]
-		return 0	
+		return 0
 
 	def add_mesh(self, mesh):
-		'''Add triangular meshing as 2d array'''
+		"""Add triangular meshing as 2d array"""
 
 		mesh = np.asarray(mesh)
 		if mesh.ndim !=2:
@@ -124,7 +127,7 @@ class Shape:
 		return 0
 
 	def add_labels(self, labels):
-		'''Add labels to nodes as 1d array.'''
+		"""Add labels to nodes as 1d array."""
 
 		labels = np.asarray(labels)
 		if labels.ndim != 1:
@@ -138,7 +141,7 @@ class Shape:
 		return 0
 
 	def import_vtk(self, fname, check=1):
-		'''Import all data from vtk file.'''
+		"""Import all data from vtk file."""
 
 		if not isinstance(fname, str):
 			print 'Please enter the file name as a string.'
@@ -173,7 +176,7 @@ class Shape:
 		return self.id
 
 	def import_fundi(self, fname):
-		'''Import fundus lines from a vtk file.'''
+		"""Import fundus lines from a vtk file."""
 		Data = pyvtk.VtkData(fname)
 
 		new_nodes = np.asarray(Data.structure.points)
@@ -190,20 +193,20 @@ class Shape:
 		if np.amax(self.Fundi) >= self.num_nodes:
 			print 'The fundi reference nodes which are not in the file. Please consider.'
 
-		return self.id	
+		return self.id
 
 	def set_id(self, id_tag):
-		'''Change the id_tag of the shape. Will be used to name files.'''
+		"""Change the id_tag of the shape. Will be used to name files."""
 		self.id = str(id_tag)
 
-	############################################			
+	############################################
 	# ------------------------------------------
-	#     'Pre-Processing of Data' Methods      
+	#     'Pre-Processing of Data' Methods
 	# ------------------------------------------
 
 	def compute_mesh_measure(self, total=False):
-		'''Computes the surface area of a shape object. 
-		Finds the area of each triangle.'''
+		"""Computes the surface area of a shape object.
+		Finds the area of each triangle."""
 
 		# Check that nodes and meshing have been inputted.
 		# Check that if shape is composed of polylines, the area is 0.
@@ -237,11 +240,11 @@ class Shape:
 
 		if total:
 			return sum(measure)
-		else:	
+		else:
 			return measure
 
 	def compute_angles(self):
-		'''Computes the angles for each triangle.'''
+		"""Computes the angles for each triangle."""
 		# Currently only available for triangles.
 
 		if self.Mesh.shape[1] != 3:
@@ -264,7 +267,7 @@ class Shape:
 		return angles
 
 	def compute_smallest_angles(self, threshold=0.03):
-		'''Find triangles in meshing with smallest angles.'''
+		"""Find triangles in meshing with smallest angles."""
 		# Currently only available for triangles.
 
 		if self.Mesh.shape[1] != 3:
@@ -281,7 +284,7 @@ class Shape:
 		return np.arange(angles.size)[minima<threshold]
 
 	def remove_isolated(self):
-		'''Remove any vertices which are not connected to others via the meshing.'''
+		"""Remove any vertices which are not connected to others via the meshing."""
 		# Remove any vertices which are not connected via meshing.
 
 		if not(self.has_nodes and self.has_mesh):
@@ -338,7 +341,7 @@ class Shape:
 				# Record index of old triangle to delete later:
 				old_triangles.append(ind)
 
-				# Get vertices of this triangular mesh:		
+				# Get vertices of this triangular mesh:
 				v0, v1, v2 = self.Nodes[self.Mesh[ind,0]], self.Nodes[self.Mesh[ind,1]], self.Nodes[self.Mesh[ind,2]]
 
 				# Find midpoints of each edge:
@@ -349,7 +352,7 @@ class Shape:
 				# Add vertices to the list of nodes:
 				#############################################################
 				# Check to make sure vertices aren't already in list of nodes:
-				dist = self.Nodes - mid01 
+				dist = self.Nodes - mid01
 				duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
 				minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
 
@@ -360,7 +363,7 @@ class Shape:
 					self.Nodes = np.vstack((self.Nodes,mid01))
 					ind01 = self.Nodes.shape[0] - 1
 
-				dist = self.Nodes - mid02 
+				dist = self.Nodes - mid02
 				duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
 				minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
 
@@ -371,7 +374,7 @@ class Shape:
 					self.Nodes = np.vstack((self.Nodes,mid02))
 					ind02 = self.Nodes.shape[0] - 1
 
-				dist = self.Nodes - mid12 
+				dist = self.Nodes - mid12
 				duplicates = [np.linalg.norm(dist[j]) for j in xrange(dist.shape[0])]
 				minimum, minindex = np.amin(duplicates), np.argmin(duplicates)
 
@@ -435,7 +438,7 @@ class Shape:
 		self.preserved_labels = np.zeros(self.num_nodes)
 
 		# To preserve the border nodes, find all nodes which are part of a triangle with
-		# fundal nodes, and record their index in the array self.preserved_labes 		
+		# fundal nodes, and record their index in the array self.preserved_labes
 		if keep in ['border','both']:
 			print 'Preserving border nodes...'
 			for triangles in self.Mesh:
@@ -497,7 +500,7 @@ class Shape:
 			set_of_labels = np.insert(set_of_labels, 0, -1)
 
 		# Number of classes and nodes
-		C = len(set_of_labels) - 1	
+		C = len(set_of_labels) - 1
 		n = self.Labels.shape[0]
 
 		# Relabel the classes 0 through C, 0 now indicating no class.
@@ -510,7 +513,7 @@ class Shape:
 		self.label_mapping = dict([(i, int(set_of_labels[i+1])) for i in xrange(-1,C)])
 		print "Label Mapping: ", self.label_mapping
 
-		# Construct L x C Matrix	
+		# Construct L x C Matrix
 		self.label_matrix = np.zeros((n, C))
 
 		for i in xrange(n):
@@ -555,7 +558,7 @@ class Shape:
 
 		# We can now output a file to show the boundary.
 		if draw:
-			filename = '/home/eli/Neuroscience-Research/Visualizations/Alignment/label_boundary_'+self.id+'.vtk'
+			filename = '/home/eli/Neuroscience-Research/Realign/label_boundary_'+self.id+'.vtk'
 			vo.write_all(filename,self.Nodes,self.Mesh,self.label_boundary)
 
 		# Reformat label_boundary to include only the indices of those nodes in the boundary.
@@ -563,8 +566,75 @@ class Shape:
 
 		return self.label_boundary
 
+	def realign_boundary(self):
+		""" Massive(!) method to realign the label boundary with fundi.
+		This method will call various other methods to accomplish its task.
+		The output will be two new files:
+		1) New labels!
+		2) Label Boundary showing the results.
+
+		Thinking out loud here.
+		We can first construct polylines of the label boundary. This is an option.
+		As it stands now, the label boundary consists of a set of points, not lines.
+		We could break up the set of points into those which comes from the same region
+		(as identified by their label). We would then have a cyclical graph of points for each region
+		(i.e. its enclosing region). Next, we could identify individual segments as those which are
+		attached to the same neighboring labeled region.
+		"""
+
+		# Step 1. Find those nodes which form the label boundary.
+		#   They will be contained in the np array self.label_boundary.
+
+		self.find_label_boundary()
+
+		# Step 2. Break up this array into subsets, each subset containing the nodes which enclose
+		#   a given region.
+
+		self.label_boundary_region = {}
+		setA = set(self.label_boundary)
+
+		for i in xrange(self.num_classes):
+			Class = self.label_mapping[i]
+			setB = set(np.nonzero(self.Labels==Class)[0])
+			setC = setA.intersection(setB)
+
+			self.label_boundary_region[Class] = setC
+
+		# Step 3. Break up each boundary_region into segments.
+		#   A segment is defined as a part of a region which borders the same neighboring region.
+		#   Since segments are defined by their neighbors, we can easily think of segment pairs.
+		#   We will thus construct segment pairs.
+		#   They will be stored in a dictionary. The key will be a tuple of the two labels.
+		#   The value will be a tuple of two sets.
+
+		self.segment_pairs = {}
+
+		for i in xrange(self.num_classes):
+			Class = self.label_mapping[i]
+			first_class = self.label_boundary_region[Class]
+			for node in first_class:
+				neighbors = self.neighbors(node)
+
+	def neighbors(self, node):
+		""" This method will accomplish the simple task of taking a node as input and returning
+		an np array of the node's neighbors, as defined by self.Mesh.
+		"""
+		# First check to see if the neighbors matrix was constructed.
+		if not self.neighbors_constructed:
+			""" Then we must construct it now."""
+			self.Neighbors = lil_matrix((self.num_nodes, self.num_nodes))
+
+			for row in self.Mesh:
+				self.Neighbors[row[0], row[1]] = self.Neighbors[row[1], row[0]] = 1
+				self.Neighbors[row[0], row[2]] = self.Neighbors[row[2], row[0]] = 1
+				self.Neighbors[row[1], row[2]] = self.Neighbors[row[2], row[1]] = 1
+
+			self.neighbors_constructed = 1
+
+		return np.nonzero(self.Neighbors.tocsr()[node])[1]
+
 	def check_well_formed(self):
-		'''Check whether the inputted data is well formed.'''
+		"""Check whether the inputted data is well formed."""
 		# Check that number of labels corresponds to number of nodes.
 		# Check that numbers in meshing don't exceed number of nodes.
 
@@ -608,12 +678,12 @@ class Shape:
 		self.check_well_formed()
 		self.create_vtk(fname)
 
-	############################################			
+	############################################
 	# ------------------------------------------
-	#     'Processing of Data' Methods      
+	#     'Processing of Data' Methods
 	# ------------------------------------------
 
-	def compute_lbo(self, num=500, check=0, fname='/home/eli/Neuroscience-Research/Analysis_Hemispheres/Testing.vtk'): 
+	def compute_lbo(self, num=500, check=0, fname='/home/eli/Neuroscience-Research/Analysis_Hemispheres/Testing.vtk'):
 		"""Computation of the LBO using ShapeDNA_Tria software."""
 		# Check that everything has been done properly
 		# Create vtk file
@@ -644,7 +714,7 @@ class Shape:
 		if self.num_nodes < 5000:
 			time.sleep(7)
 		else:
-			time.sleep(16)	
+			time.sleep(16)
 		f = open(outfile)
 
 		eigenvalues = np.zeros(num)
@@ -730,7 +800,7 @@ class Shape:
 
 	############################################
 	# ------------------------------------------
-	#     'Post-Processing of Data' Methods      
+	#     'Post-Processing of Data' Methods
 	# ------------------------------------------
 
 	def assign_max_prob_label(self):
@@ -765,9 +835,9 @@ class Shape:
 
 		return self.max_prob_label
 
-	############################################			
+	############################################
 	# ------------------------------------------
-	#     'Analysis of Data' Methods      
+	#     'Analysis of Data' Methods
 	# ------------------------------------------
 
 	def assess_percent_correct(self):
@@ -794,9 +864,9 @@ class Shape:
 		Label used is the label name in the vtk file!"""
 		return sum(np.asarray(map(int,self.Labels==label)))
 
-	############################################			
+	############################################
 	# ------------------------------------------
-	#     'Visualization of Data' Methods      
+	#     'Visualization of Data' Methods
 	# ------------------------------------------
 
 	def highlight(self, class_label):
@@ -1056,6 +1126,21 @@ class Shape:
 
 # Derived Classes:
 
+class BrainTuple(Shape):
+	""" This class derives from the basic Shape class but adds functionality to handle multiple
+	brain hemispheres and files.
+	"""
+
+	def import_bundle(self, dir):
+		""" This method allows us to import an entire directory of files.
+		It will be useful for establishing consensus labels and for performing analyses on data
+		coming from more than one hemisphere (more than one vtk file).
+		"""
+		self.Files = os.listdir(dir)
+		self.num_brains = len(self.Files)
+
+
+
 class ShapeRegions(Shape):
 	'''
 
@@ -1093,4 +1178,10 @@ def test2():
 	shape.initialize_labels(keep='label_boundary')
 	shape.propagate_labels(max_iters=6000, sigma=5)
 
-test2()
+def test3():
+	""" This test is for the realignment task."""
+	shape.import_vtk('/home/eli/Neuroscience-Research/Realign/labels.vtk')
+	shape.import_fundi('/home/eli/Neuroscience-Research/Realign/fundi.vtk')
+	shape.find_label_boundary()
+
+test3()
