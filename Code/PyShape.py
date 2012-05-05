@@ -1184,4 +1184,16 @@ def test3():
 	shape.import_fundi('/home/eli/Neuroscience-Research/Realign/fundi.vtk')
 	shape.find_label_boundary()
 
-test3()
+def test4():
+	""" This test assesses the neighbor() function.
+	"""
+	shape.import_vtk('/home/eli/Neuroscience-Research/Label_Prop/testdatalabels.vtk')
+	a = shape.neighbors(0)
+	b = shape.neighbors(1)
+	c = shape.neighbors(2)
+	print 'neighbors of 0:', a
+	print 'neighbors of 1:', b
+	print 'neighbors of 2:', c
+
+
+test4()
