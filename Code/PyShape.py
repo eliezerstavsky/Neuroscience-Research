@@ -195,10 +195,6 @@ class Shape:
 
 		return self.id
 
-	def set_id(self, id_tag):
-		"""Change the id_tag of the shape. Will be used to name files."""
-		self.id = str(id_tag)
-
 	############################################
 	# ------------------------------------------
 	#     'Pre-Processing of Data' Methods
@@ -216,12 +212,12 @@ class Shape:
 			print 'Please input both the nodes and meshing of the shape.'
 			return
 
-		measure = np.zeros(self.Mesh.shape[0])
+		self.measure = np.zeros(self.Mesh.shape[0])
 		if self.Mesh.shape[1] == 2:
 			print 'The meshing comprises polylines. Length will be outputted.'
 			i = 0
 			for line in self.Mesh:
-				measure[i] = np.linalg.norm(self.Nodes[line[0]] - self.Nodes[line[1]])
+				self.measure[i] = np.linalg.norm(self.Nodes[line[0]] - self.Nodes[line[1]])
 				i += 1
 		elif self.Mesh.shape[1] == 3:
 			print 'The meshing comprises triangles. Area will be outputted.'
@@ -232,16 +228,18 @@ class Shape:
 				c = np.linalg.norm(self.Nodes[triangle[2]] - self.Nodes[triangle[0]])
 				s = (a+b+c)/2.0
 
-				measure[i] = np.sqrt(s*(s-a)*(s-b)*(s-c))
+				self.measure[i] = np.sqrt(s*(s-a)*(s-b)*(s-c))
 				i += 1
 		elif self.Mesh.shape[1] == 4:
 			print 'The meshing comprises tetrahedra. Computation currently unavailable.'
-			measure = 0
+			self.measure = 0
+
+		self.surface_area = sum(self.measure)
 
 		if total:
-			return sum(measure)
+			return self.surface_area
 		else:
-			return measure
+			return self.measure
 
 	def compute_angles(self):
 		"""Computes the angles for each triangle."""
@@ -254,17 +252,17 @@ class Shape:
 		if not(self.has_nodes and self.has_mesh):
 			print 'You have yet to add nodes and meshing!'
 
-		angles = np.zeros((self.num_faces, 3))
+		self.angles = np.zeros((self.num_faces, 3))
 		i = 0
 		for triangle in self.Mesh:
 			a = np.linalg.norm(self.Nodes[triangle[0]] - self.Nodes[triangle[1]])
 			b = np.linalg.norm(self.Nodes[triangle[1]] - self.Nodes[triangle[2]])
 			c = np.linalg.norm(self.Nodes[triangle[2]] - self.Nodes[triangle[0]])
-			angles[i,0] = np.arccos((b**2+c**2-a**2)/(2.0*b*c))
-			angles[i,1] = np.arccos((a**2+c**2-b**2)/(2.0*a*c))
-			angles[i,2] = np.arccos((a**2+b**2-c**2)/(2.0*a*b))
+			self.angles[i,0] = np.arccos((b**2+c**2-a**2)/(2.0*b*c))
+			self.angles[i,1] = np.arccos((a**2+c**2-b**2)/(2.0*a*c))
+			self.angles[i,2] = np.arccos((a**2+b**2-c**2)/(2.0*a*b))
 			i += 1
-		return angles
+		return self.angles
 
 	def compute_smallest_angles(self, threshold=0.03):
 		"""Find triangles in meshing with smallest angles."""
@@ -278,10 +276,11 @@ class Shape:
 			print 'You have yet to add nodes and meshing!'
 			return
 
-		angles = self.compute_angles()
-		minima = np.amin(angles, 1)
+		self.compute_angles()
+		minima = np.amin(self.angles, 1)
 
-		return np.arange(angles.size)[minima<threshold]
+		self.smallest_angles = np.arange(self.angles.size)[minima<threshold]
+		return self.smallest_angles
 
 	def remove_isolated(self):
 		"""Remove any vertices which are not connected to others via the meshing."""
@@ -566,29 +565,16 @@ class Shape:
 
 		return self.label_boundary
 
+
 	def realign_boundary(self):
-		""" Massive(!) method to realign the label boundary with fundi.
+		""" Massive method to realign the label boundary with fundi.
 		This method will call various other methods to accomplish its task.
 		The output will be two new files:
 		1) New labels!
 		2) Label Boundary showing the results.
-
-		Thinking out loud here.
-		We can first construct polylines of the label boundary. This is an option.
-		As it stands now, the label boundary consists of a set of points, not lines.
-		We could break up the set of points into those which comes from the same region
-		(as identified by their label). We would then have a cyclical graph of points for each region
-		(i.e. its enclosing region). Next, we could identify individual segments as those which are
-		attached to the same neighboring labeled region.
 		"""
 
-		# Step 1. Find those nodes which form the label boundary.
-		#   They will be contained in the np array self.label_boundary.
-
 		self.find_label_boundary()
-
-		# Step 2. Break up this array into subsets, each subset containing the nodes which enclose
-		#   a given region.
 
 		self.label_boundary_region = {}
 		setA = set(self.label_boundary)
@@ -600,12 +586,6 @@ class Shape:
 
 			self.label_boundary_region[Class] = setC
 
-		# Step 3. Break up each boundary_region into segments.
-		#   A segment is defined as a part of a region which borders the same neighboring region.
-		#   Since segments are defined by their neighbors, we can easily think of segment pairs.
-		#   We will thus construct segment pairs.
-		#   They will be stored in a dictionary. The key will be a tuple of the two labels.
-		#   The value will be a tuple of two sets.
 
 		self.segment_pairs = {}
 
@@ -746,7 +726,7 @@ class Shape:
 		self.eigenvalues = eigenvalues
 		return self.eigenvalues
 
-	def propagate_labels(self,method='weighted_average', kernel=cw.rbf_kernel, sigma=10, vis=True, alpha=1, diagonal=0, repeat=1, max_iters=50, tol=1, eps=1e-7):
+	def propagate_labels(self,method='weighted_average', realign=False, kernel=cw.rbf_kernel, sigma=10, vis=True, alpha=1, diagonal=0, repeat=1, max_iters=50, tol=1, eps=1e-7):
 		"""Main function to propagate labels.
 		A number of methods may be used for this purpose:
 		1) 'weighted_average'
@@ -762,7 +742,9 @@ class Shape:
 		7) tol - threshold to assess convergence
 		8) eps - for numerical stability
 		9) diagonal - option to change values along the diagonal, will have an effect on some alg.
-		10) vis - boolean, would you like to see the algorithm in work?"""
+		10) vis - boolean, would you like to see the algorithm in work?
+		11) realign - boolean, would you like to realign the labels?
+		"""
 
 		# Step 1. Construct Affinity Matrix - compute edge weights:
 		self.aff_mat = cw.compute_weights(self.Nodes,self.Mesh,kernel=kernel,sigma=sigma, add_to_graph=False)
@@ -773,11 +755,11 @@ class Shape:
 		# Step 3. Propagate Labels!
 		if method == "weighted_average":
 			print 'Performing Weighted Average Algorithm! Parameters: max_iters={0}'.format(str(max_iters))
-			prob_matrix = self.weighted_average(max_iters, tol, vis=vis)
+			prob_matrix = self.weighted_average(realign, max_iters, tol, vis=vis)
 
 		elif method == "jacobi_iteration":
 			print 'Performing Jacobi Iteration Algorithm! Parameters: max_iters={0}'.format(str(max_iters))
-			prob_matrix = self.jacobi_iteration(max_iters, tol)
+			prob_matrix = self.jacobi_iteration(alpha, max_iters, tol, eps)
 
 #		elif method == "Label_Spreading":
 #			print 'Performing Label Spreading Algorithm! Parameters: alpha={0}, max_iters={1}'.format(str(alpha), str(max_iters))
@@ -890,7 +872,7 @@ class Shape:
 	# 			  Helper Methods
 	# ------------------------------------------
 
-	def weighted_average(self, max_iters, tol, vis=True):
+	def weighted_average(self, realign, max_iters, tol, vis=True):
 		"""Performs iterative weighted average algorithm to propagate labels to unlabeled nodes.
 		Features: Hard label clamps, probabilistic solution.
 		See: Zhu and Ghahramani, 2002."""
@@ -1139,8 +1121,6 @@ class BrainTuple(Shape):
 		self.Files = os.listdir(dir)
 		self.num_brains = len(self.Files)
 
-
-
 class ShapeRegions(Shape):
 	'''
 
@@ -1155,8 +1135,6 @@ class ShapeRegions(Shape):
 		# if diagonal_entries != 0:
 		#	for i in xrange(num_nodes):
 		#		self.aff_mat[i, i] = diagonal_entries
-
-
 
 
 ############################################
@@ -1196,4 +1174,4 @@ def test4():
 	print 'neighbors of 2:', c
 
 
-test4()
+test1()
