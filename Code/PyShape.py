@@ -87,10 +87,10 @@ class Shape:
 		# For constructing the neighbors matrix
 		self.neighbors_constructed = 0
 
-	############################################
-	# ------------------------------------------
-	#     'Import Data' Methods
-	# ------------------------------------------
+############################################
+# ------------------------------------------
+#     'Import Data' Methods
+# ------------------------------------------
 
 	def add_nodes(self, nodes):
 		"""Add 3D coordinates of nodes as 2d array."""
@@ -195,10 +195,10 @@ class Shape:
 
 		return self.id
 
-	############################################
-	# ------------------------------------------
-	#     'Pre-Processing of Data' Methods
-	# ------------------------------------------
+############################################
+# ------------------------------------------
+#     'Pre-Processing of Data' Methods
+# ------------------------------------------
 
 	def compute_mesh_measure(self, total=False):
 		"""Computes the surface area of a shape object.
@@ -293,20 +293,19 @@ class Shape:
 		verts = set(np.arange(self.num_nodes))
 		meshing = set(self.Mesh.ravel())
 
-		isolated = list(set.difference(verts, meshing))
+		self.isolated = list(set.difference(verts, meshing))
 
-		self.Nodes = np.delete(self.Nodes,isolated,0)
+		self.Nodes = np.delete(self.Nodes,self.isolated,0)
 		self.num_nodes = self.Nodes.shape[0]
 
 		# Update mesh numbering
-		isolated = sorted(isolated, reverse=True)
-		print isolated
-		for i in isolated:
+		self.isolated = sorted(self.isolated, reverse=True)
+		for i in self.isolated:
 			for j in xrange(i, self.num_nodes+1):
 				self.Mesh[self.Mesh==j] = j - 1
 
 		self.num_faces = self.Mesh.shape[0]
-		return 0
+		return self.isolated
 
 	def refine_mesh(self, depth = 1, which_fraction=1):
 		"""Refine the meshing of the shape object.
@@ -411,16 +410,16 @@ class Shape:
 			return
 
 		# Find triangles with angles below the threshold.
-		low_quality = self.compute_smallest_angles()
+		self.low_quality_triangles = self.compute_smallest_angles()
 
 		if method=='delete':
 			# Delete those triangles from the meshing.
-			bad_triangles = sorted(low_quality, reverse=True)
+			bad_triangles = sorted(self.low_quality_triangles, reverse=True)
 			for t in bad_triangles:
 				self.Mesh = np.delete(self.Mesh, t, 0)
 			self.num_faces = self.Mesh.shape[0]
 
-		return sorted(low_quality)
+		return sorted(self.low_quality_triangles)
 
 	def initialize_labels(self, keep='border', fraction=.05):
 		"""Initialize a set of labels to serve as the seeds for label propagation.
@@ -492,24 +491,24 @@ class Shape:
 		1 in column = membership in that class. -1 = absence. 0 = unlabeled data."""
 
 		# Remove duplicates
-		set_of_labels = np.sort(np.asarray(list(set(self.assigned_labels))))
+		self.set_of_labels = np.sort(np.asarray(list(set(self.assigned_labels))))
 
 		# If all data is labeled, insert -1 at beginning of list for consistency of later methods.
-		if -1 not in set_of_labels:
-			set_of_labels = np.insert(set_of_labels, 0, -1)
+		if -1 not in self.set_of_labels:
+			self.set_of_labels = np.insert(self.set_of_labels, 0, -1)
 
 		# Number of classes and nodes
-		C = len(set_of_labels) - 1
+		C = len(self.set_of_labels) - 1
 		n = self.Labels.shape[0]
 
 		# Relabel the classes 0 through C, 0 now indicating no class.
-		for i in set_of_labels[2:]:
+		for i in self.set_of_labels[2:]:
 			self.assigned_labels[np.nonzero(self.assigned_labels == i)] = np.nonzero(set_of_labels == i)
 		self.assigned_labels[np.nonzero(self.assigned_labels == 0)] = 1
 		self.assigned_labels[np.nonzero(self.assigned_labels == -1)] = 0
 
 		# Create a dictionary mapping new class labels to old class labels:
-		self.label_mapping = dict([(i, int(set_of_labels[i+1])) for i in xrange(-1,C)])
+		self.label_mapping = dict([(i, int(self.set_of_labels[i+1])) for i in xrange(-1,C)])
 		print "Label Mapping: ", self.label_mapping
 
 		# Construct L x C Matrix
@@ -565,7 +564,7 @@ class Shape:
 
 		return self.label_boundary
 
-
+	# Consider renaming this module.
 	def realign_boundary(self):
 		""" Massive method to realign the label boundary with fundi.
 		This method will call various other methods to accomplish its task.
@@ -658,10 +657,10 @@ class Shape:
 		self.check_well_formed()
 		self.create_vtk(fname)
 
-	############################################
-	# ------------------------------------------
-	#     'Processing of Data' Methods
-	# ------------------------------------------
+############################################
+# ------------------------------------------
+#     'Processing of Data' Methods
+# ------------------------------------------
 
 	def compute_lbo(self, num=500, check=0, fname='/home/eli/Neuroscience-Research/Analysis_Hemispheres/Testing.vtk'):
 		"""Computation of the LBO using ShapeDNA_Tria software."""
@@ -697,7 +696,7 @@ class Shape:
 			time.sleep(16)
 		f = open(outfile)
 
-		eigenvalues = np.zeros(num)
+		self.eigenvalues = np.zeros(num)
 		add = False
 		i = 0
 
@@ -715,7 +714,7 @@ class Shape:
 					vals = [-1]
 					print 'Could not properly convert line'
 
-				eigenvalues[i:i+len(vals)] = vals
+				self.eigenvalues[i:i+len(vals)] = vals
 				i += len(vals)
 			elif 'Eigenvalues' in line:
 				add = True
@@ -723,7 +722,6 @@ class Shape:
 			if i == num:
 				break
 
-		self.eigenvalues = eigenvalues
 		return self.eigenvalues
 
 	def propagate_labels(self,method='weighted_average', realign=False, kernel=cw.rbf_kernel, sigma=10, vis=True, alpha=1, diagonal=0, repeat=1, max_iters=50, tol=1, eps=1e-7):
@@ -780,10 +778,10 @@ class Shape:
 
 		return self.probabilistic_assignment
 
-	############################################
-	# ------------------------------------------
-	#     'Post-Processing of Data' Methods
-	# ------------------------------------------
+############################################
+# ------------------------------------------
+#     'Post-Processing of Data' Methods
+# ------------------------------------------
 
 	def assign_max_prob_label(self):
 		""" This method takes self.probabilistic_assignment and determines the most likely labeling of a node.
@@ -817,10 +815,10 @@ class Shape:
 
 		return self.max_prob_label
 
-	############################################
-	# ------------------------------------------
-	#     'Analysis of Data' Methods
-	# ------------------------------------------
+############################################
+# ------------------------------------------
+#     'Analysis of Data' Methods
+# ------------------------------------------
 
 	def assess_percent_correct(self):
 		""" This method compares the results of label propagation to the "ground truth" labels found
@@ -829,6 +827,7 @@ class Shape:
 		self.percent_labeled_correctly = (np.sum(self.max_prob_label == self.Labels) + 0.0) / self.num_nodes
 		return self.percent_labeled_correctly
 
+	# This method is devoid of substance.
 	def assess_secondary_probabilities(self):
 		""" This method finds out which and how many nodes would have been correctly labeled using
 		not the maximum probability, but the 'next' best ones.
@@ -839,17 +838,28 @@ class Shape:
 
 	def count_assigned_members(self, label):
 		""" Method which returns the number of members in a class. Label used is artificial ordering."""
-		return sum(map(int,self.label_matrix[:,label]==1))
+		self.num_assigned_members = sum(map(int,self.label_matrix[:,label]==1))
+		return self.num_assigned_members
 
 	def count_real_members(self, label):
 		""" Method which returns the number of members in a class, as per the manual labeling.
 		Label used is the label name in the vtk file!"""
-		return sum(np.asarray(map(int,self.Labels==label)))
+		self.num_real_members = sum(np.asarray(map(int,self.Labels==label)))
+		return self.num_real_members
 
-	############################################
-	# ------------------------------------------
-	#     'Visualization of Data' Methods
-	# ------------------------------------------
+	def count_current_members(self, label):
+		""" This method counts the number of nodes with a given label, after the
+		label propagation algorithm has been run.
+		"""
+		a = self.probabilistic_assignment[:,label] > 0
+		b = map(int, a)
+		self.num_current_members = sum(b)
+		return self.num_current_members
+
+############################################
+# ------------------------------------------
+#     'Visualization of Data' Methods
+# ------------------------------------------
 
 	def highlight(self, class_label):
 		"""
@@ -867,10 +877,10 @@ class Shape:
 
 		vo.write_all(filename, self.Nodes, self.Mesh, indices)
 
-	############################################
-	# ------------------------------------------
-	# 			  Helper Methods
-	# ------------------------------------------
+############################################
+# ------------------------------------------
+# 			  Helper Methods
+# ------------------------------------------
 
 	def weighted_average(self, realign, max_iters, tol, vis=True):
 		"""Performs iterative weighted average algorithm to propagate labels to unlabeled nodes.
@@ -996,10 +1006,7 @@ class Shape:
 
 			print 'There were {0} nodes initially preserved in this class'.format(str(self.count_assigned_members(i)))
 			print 'The file actually had {0} nodes in this class'.format(str(self.count_real_members(self.label_mapping[i])))
-			a = self.probabilistic_assignment[:,i] > 0
-			b = map(int, a)
-			c = sum(b)
-			print 'Using only those nodes which crossed the threshold, there are now: ', c
+			print 'Using only those nodes which crossed the threshold, there are now: '.format(str(self.count_real_members(i)))
 			i += 1
 
 		""" Before reporting the probabilistic assignment, we change all -1's, which were used
